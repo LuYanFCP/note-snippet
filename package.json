@@ -1,0 +1,50 @@
+{
+  "name": "github-issues-blog",
+  "version": "1.0.0",
+  "description": "A static blog built with GitHub Issues content",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "prebuild": "node src/lib/prebuild.ts",
+    "build": "next build",
+    "export": "next build && next export",
+    "start": "npx serve out",
+    "lint": "eslint ."
+  },
+  "keywords": [
+    "blog",
+    "github",
+    "issues",
+    "nextjs",
+    "react"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.8.2",
+    "katex": "^0.16.21",
+    "mermaid": "^11.4.1",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^15.6.1",
+    "rehype-katex": "^7.0.1",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "shadcn-ui": "latest"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.12",
+    "@tailwindcss/typography": "^0.5.16",
+    "@types/node": "22.13.10",
+    "@types/react": "19.0.10",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^7.32.0",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.0.12",
+    "typescript": "^4.4.4",
+    "ts-node": "^10.9.1"
+  }
+}

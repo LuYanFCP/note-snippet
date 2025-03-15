@@ -1,0 +1,75 @@
+baseURL = 'https://example.org/'
+languageCode = 'zh-cn'
+title = 'My New Hugo Site'
+theme = 'xmin'
+
+# 添加永久链接配置
+[permalinks]
+  note = "/note/:year/:month/:day/:slug/"
+  post = "/post/:year/:month/:day/:slug/"
+
+# 添加导航菜单
+[menu]
+  [[menu.main]]
+    name = "Home"
+    url = ""
+    weight = 1
+  [[menu.main]]
+    name = "About"
+    url = "about/"
+    weight = 2
+#   [[menu.main]]
+#     name = "Categories"
+#     url = "categories/"
+#     weight = 3
+  [[menu.main]]
+    name = "Tags"
+    url = "tags/"
+    weight = 3
+  [[menu.main]]
+    name = "Subscribe"
+    url = "index.xml"
+    weight = 4
+
+[params]
+  # 添加页脚信息，支持Markdown格式
+  footer = "&copy; [0xNullPath](https://blog.0xnullpath.work) 2023 -- {Year} | [Github](https://github.com/LuYanFCP) | [Twitter](https://twitter.com/luyanfcp)"
+  
+  [params.github]
+    enabled = true
+    username = "luyanfcp"
+    branch = "master"
+    token = ""  # 可选，建议通过命令行参数提供
+    
+    # README配置
+    readme_to_index = true
+    readme_path = "content/about/_index.md"
+    readme_title = "关于我"
+    
+    # Release issue配置
+    releases_dir = "content/posts"
+    
+    exclude_tags = ["Release"]  # 要排除的标签列表
+    
+    # 多仓库配置 - issues
+    [[params.github.issue_repos]]
+      owner = "luyanfcp"
+      repo = "note-snippet"
+  
+[markup]  
+  [markup.goldmark]  
+    [markup.goldmark.renderer]  
+      unsafe = true  
+  
+  [markup.tableOfContents]  
+    endLevel = 3  
+    ordered = false  
+    startLevel = 2  
+  
+  [markup.highlight]  
+    noClasses = false  
+  
+  [markup.render]  
+    [markup.render.mermaid]  
+      enable = true
+

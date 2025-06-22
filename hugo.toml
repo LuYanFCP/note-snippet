@@ -1,6 +1,6 @@
 baseURL = 'https://example.org/'
 languageCode = 'zh-cn'
-title = 'My New Hugo Site'
+title = 'Code Now'
 theme = 'xmin'
 
 # 添加永久链接配置
@@ -40,21 +40,29 @@ theme = 'xmin'
     username = "luyanfcp"
     branch = "master"
     token = ""  # 可选，建议通过命令行参数提供
-    
+    favicon = "/favicon.ico"
+
     # README配置
     readme_to_index = true
     readme_path = "content/about/_index.md"
     readme_title = "关于我"
-    
+
     # Release issue配置
     releases_dir = "content/posts"
-    
+
     exclude_tags = ["Release"]  # 要排除的标签列表
-    
+
     # 多仓库配置 - issues
     [[params.github.issue_repos]]
       owner = "luyanfcp"
       repo = "note-snippet"
+
+
+    [[params.favicons]]
+      rel = "icon"
+      type = "image/icon"
+      sizes = "32x32"
+      href = "/favicon.icon"
   
 [markup]  
   [markup.goldmark]  
@@ -66,8 +74,18 @@ theme = 'xmin'
     ordered = false  
     startLevel = 2  
   
-  [markup.highlight]  
-    noClasses = false  
+  [markup.highlight]
+    anchorLineNos = false
+    codeFences = true
+    guessSyntax = false
+    hl_Lines = ""
+    lineAnchors = ""
+    lineNoStart = 1
+    lineNos = false
+    lineNumbersInTable = true
+    noClasses = true
+    tabWidth = 4
+
   
   [markup.render]  
     [markup.render.mermaid]  

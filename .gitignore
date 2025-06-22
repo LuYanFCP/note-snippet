@@ -1,3 +1,5 @@
 content/posts/*
 content/about.md
+content/about/
 public
+.DS_Store

@@ -129,14 +129,47 @@ def fetch_repository_tags(owner, repo, token=None, exclude_tags=None):
     
     return all_tags
 
-def convert_issue_to_markdown(issue, repo_owner, repo_name):
+def extract_frontmatter_info(content: str) -> tuple[str | None, str]:
+    """
+    Extract date from frontmatter and return content without frontmatter.
+    
+    Args:
+        content: Markdown content that may contain frontmatter
+    
+    Returns:
+        Tuple of (date string or None, content with frontmatter removed)
+    """
+    if not content:
+        return None, content or ""
+    
+    # Match frontmatter between --- markers
+    frontmatter_match = re.match(r'^---\s*\n(.*?)\n---\s*\n?', content, re.DOTALL)
+    if not frontmatter_match:
+        return None, content
+    
+    frontmatter = frontmatter_match.group(1)
+    
+    # Extract date field
+    date_str: str | None = None
+    date_match = re.search(r'^date:\s*(.+)$', frontmatter, re.MULTILINE)
+    if date_match:
+        date_str = date_match.group(1).strip()
+    
+    # Remove frontmatter from content
+    content_without_frontmatter = content[frontmatter_match.end():].lstrip()
+    
+    return date_str, content_without_frontmatter
+
+
+def convert_issue_to_markdown(issue: dict, repo_owner: str, repo_name: str, existing_content: str | None = None) -> tuple[str, str]:
     """
     将issue内容转换为Markdown格式，包括标签
     
     Args:
-        issue (dict): issue数据
-        repo_owner (str): 仓库所有者
-        repo_name (str): 仓库名称
+        issue: issue数据
+        repo_owner: 仓库所有者
+        repo_name: 仓库名称
+        existing_content: 已存在的markdown内容，用于保留原有的date字段
     
     Returns:
         str: Markdown格式的内容
@@ -152,10 +185,19 @@ def convert_issue_to_markdown(issue, repo_owner, repo_name):
     # 提取标签
     labels = [label["name"] for label in issue.get("labels", [])]
     
+    # Extract date from body frontmatter and remove frontmatter from body
+    body_date, body = extract_frontmatter_info(body)
+    
+    # Extract date from existing file's frontmatter
+    existing_date, _ = extract_frontmatter_info(existing_content)
+    
+    # Priority: existing file date > body frontmatter date > issue created_at
+    date_str = existing_date or body_date or created_at.strftime('%Y-%m-%d %H:%M:%S')
+    
     # 创建frontmatter
     frontmatter = f"""---
 title: "{title}"
-date: {created_at.strftime('%Y-%m-%d %H:%M:%S')}
+date: {date_str}
 author: {author}
 issue_number: {number}
 repo: "{repo_owner}/{repo_name}"
@@ -388,7 +430,17 @@ def main():
             
             # 转换并保存每个issue
             for issue in issues:
-                markdown_content, filename = convert_issue_to_markdown(issue, repo_owner, repo_name)
+                # Generate filename first to check for existing content
+                _, filename = convert_issue_to_markdown(issue, repo_owner, repo_name)
+                existing_file_path = os.path.join(releases_dir, filename)
+                
+                # Read existing content if file exists
+                existing_content: str | None = None
+                if os.path.exists(existing_file_path):
+                    with open(existing_file_path, 'r', encoding='utf-8') as f:
+                        existing_content = f.read()
+                
+                markdown_content, filename = convert_issue_to_markdown(issue, repo_owner, repo_name, existing_content)
                 save_markdown_file(markdown_content, filename, releases_dir)
     
     # 3. 获取并保存标签（除Release外）

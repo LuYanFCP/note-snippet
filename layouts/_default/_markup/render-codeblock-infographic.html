@@ -1,0 +1,29 @@
+<div id="infographic-{{ .Ordinal }}" class="infographic-container" style="min-height: 500px; width: 100%;"></div>
+<script>
+(function() {
+  const container = document.getElementById('infographic-{{ .Ordinal }}');
+  const syntax = `{{ .Inner | safeJS }}`;
+  
+  function renderInfographic() {
+    if (window.AntVInfographic) {
+      const { Infographic } = window.AntVInfographic;
+      const infographic = new Infographic({
+        container: container,
+        width: '100%',
+        height: '500px',
+      });
+      infographic.render(syntax);
+    } else {
+      // Retry if library not loaded yet
+      setTimeout(renderInfographic, 100);
+    }
+  }
+  
+  if (document.readyState === 'complete') {
+    renderInfographic();
+  } else {
+    window.addEventListener('load', renderInfographic);
+  }
+})();
+</script>
+{{ .Page.Store.Set "hasInfographic" true }}

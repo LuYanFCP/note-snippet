@@ -1,0 +1,786 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "Code Now" [ref=e4] [cursor=pointer]:
+        - /url: https://example.org/
+      - button "Dark" [ref=e5] [cursor=pointer]
+    - navigation [ref=e7]:
+      - link "Home" [ref=e8] [cursor=pointer]:
+        - /url: ""
+      - link "About" [ref=e9] [cursor=pointer]:
+        - /url: about/
+      - link "Tags" [ref=e10] [cursor=pointer]:
+        - /url: tags/
+      - link "Subscribe" [ref=e11] [cursor=pointer]:
+        - /url: index.xml
+  - main [ref=e12]:
+    - article [ref=e13]:
+      - generic [ref=e14]:
+        - heading "【模型推理】浅谈CUDA Graph" [level=1] [ref=e15]
+        - generic [ref=e16]:
+          - time [ref=e17]: Apr 20, 2026
+          - text: · LuYanFCP
+      - generic [ref=e18]:
+        - paragraph [ref=e19]: CUDA Graph 算是在推理优化里被提到最多的特性之一了。原理倒是不复杂：把原本一次次 launch 的 kernel 打包成一张静态图，一次性扔给 GPU，省掉中间的调度开销。
+        - paragraph [ref=e20]: 但这个"打包"具体怎么做？PyTorch 里怎么用？以及最重要的是——在 H200 上到底能快多少？
+        - paragraph [ref=e21]: 这篇文章就是把这几个问题摸清楚的过程记录。
+        - heading "1. LLM 推理在忙什么" [level=2] [ref=e22]
+        - paragraph [ref=e23]: Graph 能减少 kernel launch 的开销，但为什么 LLM 推理特别需要这个？先简单说下背景。
+        - paragraph [ref=e24]: 老生常谈的问题，LLM 推理分两个阶段：
+        - paragraph [ref=e25]:
+          - strong [ref=e26]: Prefill
+        - list [ref=e27]:
+          - listitem [ref=e28]: 输入是用户的一整段 prompt
+          - listitem [ref=e29]: 一次性做完整的 self-attention 计算，然后讲产生的KVCache写入显存或者其他存储设备，从而在Decode阶段使用。
+          - listitem [ref=e30]: 特点是计算密集，kernel消耗的时间比较多，GPU 利用率相对高，同时对内存IO要要求比较低。总之就compute-bound，算力是决定他的速度的关键。
+        - paragraph [ref=e31]:
+          - strong [ref=e32]: Decode
+        - list [ref=e33]:
+          - listitem [ref=e34]: 自回归过程，每次只生成一个 token
+          - listitem [ref=e35]:
+            - text: 要用到之前计算的 KV Cache，只做必要的更新，对于单个请求推理的时候我们输入model的Tensor维度为
+            - code [ref=e36]: "`[1, D]`"
+            - text: ", 其中D是Embedding的维度。"
+          - listitem [ref=e37]: 特点是memory-bound, 单个请求计算量少，但是需要load KVCache巨大，而且推理的时间越长，KVCache load的压力就越大。
+        - paragraph [ref=e38]: 对于这个推理过程，我们可以认为CPU step2step的将模型每一层计算所需要的kernel相关数据和元数据准备好，调用launch通知GPU执行，然后异步的准备下一次计算所需要的信息的过程。
+        - paragraph [ref=e39]: 此时因为不同Prefill和Decode不同特点，CPU与GPU直接的协作和等待有不同的表现
+        - list [ref=e40]:
+          - listitem [ref=e41]: Prefill 由于Kernel计算时间比较长，因此CPU侧的开销其实基本可以被GPU的运算Overlap掉，因此关注点核心应该是GPU Kernel如何跑更快。
+        - img "Image" [ref=e42]
+        - list [ref=e43]:
+          - listitem [ref=e44]: Decode阶段，其实就是两个地方了，首先Kernel计算量比较小，因此开销时间很少，这种情况就出现了GPU等CPU等情况，这也是就是为什么我们常说Decode阶段需要开CUDA Graph的，原因，CUDA Graph的目标就是消除GPU等CPU的问题，让GPU计算更高效。
+        - img "Image" [ref=e45]
+        - paragraph [ref=e46]: 如今其实也有主流的推理框架也支持Prefill阶段的CUDA Graph，这个主要是因为在推理过程中模型有大量的小kernel，比如说Norm这类的Kernel，这种其实也类似于Decode阶段的样子，GPU也需要等待CPU，因此CUDA Graph也是可以计算的，至于细节后面我会再写一篇专门介绍Prefill Piecewise CUDA Graph的一些细节。
+        - separator [ref=e47]
+        - heading "2. Pytorch在推理的时候CPU纠结在做什么？" [level=2] [ref=e48]
+        - paragraph [ref=e49]: 因为像Pytorch这种框架一般对于一个算子支持很多Kernel的实现，因此为了支持这么多Kernel的实现就回有大量的dispatch的代码用来运行时自动路由到不同的kernel上，同时也会有很多准备工作，所有工作完成之后就调用cudaLaunchKernel交给CUDA的runtime层做一些准备工作并发送给GPU。在GPU运行的时候其实也会有一些操作，比如说GPU侧做Kernel环境的准备，在执行后也会有一些清理状态的后处理。 总结来说就如图，一个Kernel从Pytorch发起执行到做完运行有这几个步骤：
+        - list [ref=e50]:
+          - listitem [ref=e51]:
+            - text: "CPU:"
+            - list [ref=e52]:
+              - listitem [ref=e53]: Pytorch C++ Dispatch
+              - listitem [ref=e54]: Kernel Launcher Prepare
+              - listitem [ref=e55]: cudaLaunchKernel
+          - listitem [ref=e56]:
+            - text: "GPU:"
+            - list [ref=e57]:
+              - listitem [ref=e58]: Command Processor
+              - listitem [ref=e59]: Kernel Execute
+              - listitem [ref=e60]: Post-Process
+        - img "Image" [ref=e61]
+        - heading "2.1. Pytorch Dispatch & Kernel Prepare" [level=3] [ref=e62]
+        - paragraph [ref=e63]: "Pytorch Dispatch: 这个其实是所有支持多种Kernel+使用Python实现执行前端框架的通病。"
+        - list [ref=e64]:
+          - listitem [ref=e65]: 跨语言开销：调用过程中必须包含多语言的之间的走bind或者其他机制从Python到C++到调用开销。
+          - listitem [ref=e66]: 检查并找到需要执行的Kernel函数指针：这个过程不一定发生在C++层，比如说Sglang的很多Kernel的Dispatch就发生在Python层。
+          - listitem [ref=e67]: 准备数据和元数据：Dispatch的时候由于不同Kernel要求输入的内存布局/参数以及元数据的不同，因此这里框架也需要一个转化。
+        - paragraph [ref=e68]: Kernel Prepare：主要是执行Kernel之前做一些提取裸指针/Grid/Block 维度计算/计算ShareMemory的过程。这些步骤在现代推理引擎中一般由比较专业的Kernel库来完成，比如说Flashinfer/Cutlass/Triton来完成。
+        - list [ref=e69]:
+          - listitem [ref=e70]: 取裸指针：CUDA Kernel 是不认识 PyTorch 的 Tensor 对象的。准备阶段需要调用 .data_ptr()，把 q, k_cache, v_cache 的底层显存物理地址（指针）全抽出来。
+          - listitem [ref=e71]:
+            - text: Grid/Block 维度计算：比如说推理的时候，每个请求的序列长度都不一样，而且 大部分框架都是用了 Paged KV Cache。因此，在这个阶段，CPU 必须根据当前的 Batch Size、每个 sequence 的真实长度、KV Cache Block 的映射表（Block Tables）来动态计算：
+            - strong [ref=e72]: 我需要启动多少个 CUDA Block？每个 Block 分配多少个线程（Threads）去处理哪个 token？
+            - text: 当前因为现在很多Kernel都是用一些JIT手段提前编译好了这些参数，因此这个阶段也经常去做动态找到Match输入条件的这些预编译的Kernel。
+          - listitem [ref=e73]: 计算ShareMemory/Stage这些参数。
+        - paragraph [ref=e74]: 完成这些步骤之后就完全交给cudaLaunchKernel去准备和执行Kernel。
+        - heading "2.2. Kernel Launch" [level=3] [ref=e75]
+        - paragraph [ref=e76]:
+          - text: 在代码中Kernel Launch其实就是这样一个调用
+          - code [ref=e77]: "`kernel<<<grid, block>>>(...)`"
+          - text: 这个语法背后发生的很多事，主要就是给GPU发执行指令之前runtime的准备，比如说：
+        - list [ref=e78]:
+          - listitem [ref=e79]:
+            - strong [ref=e80]: 参数准备
+            - text: ：把 kernel 参数拷到 constant memory
+          - listitem [ref=e81]:
+            - strong [ref=e82]: 配置解析
+            - text: ：grid、block、shared memory、stream 等配置
+          - listitem [ref=e83]:
+            - strong [ref=e84]: 命令入队
+            - text: ：生成一个 kernel launch command，插入到 stream 的 command queue
+          - listitem [ref=e85]:
+            - strong [ref=e86]: 可能的发送
+            - text: ：如果 queue 满了或需要同步，通过 driver 发给 GPU
+        - paragraph [ref=e87]: 在推理中，这些步骤每次都要走一遍，无论 kernel 本身多简单。对于计算时间长的kernel（比如 matmul），launch 开销占比可以忽略；但对于 tiny kernel（比如 element-wise 的 rms_norm），launch 时间和执行时间可能差不多长。
+        - paragraph [ref=e88]: 这就好比你去餐厅点餐：
+        - list [ref=e89]:
+          - listitem [ref=e90]: 点一份牛排（计算时间长的kernel），等餐 30 分钟，点餐 1 分钟，占比很小
+          - listitem [ref=e91]: 点一杯水（tiny kernel），倒水只要 5 秒，但点餐还是要 1 分钟，占比巨大。
+        - heading "2.3. Command Process & Post Process" [level=3] [ref=e92]
+        - paragraph [ref=e93]: "Command Processor: 负责接收指令、解析grid/dim、并在SM上分配任务。CPU 发来一个 Kernel A，Command Processor 接收、解析、调度。执行完后，它必须停下来，等待 CPU 通过 PCIe 总线发来 Kernel B 的指令。即使 CPU 发得很快，Command Processor 每次处理独立指令、评估 Stream 依赖关系都是有硬件周期开销的。"
+        - blockquote [ref=e94]:
+          - paragraph [ref=e95]: Cuda Graph就像我们C++编程中使用很多预编译的模版一样，相当于把动态Process过程转化为静态的了，完成Kernel A就直接做Kernel B相当于完全静态的过程，不需要调度。
+        - paragraph [ref=e96]: Post Process：主要是更新状态机和尤其是同步点的信息。
+        - heading "2.4. 这些开销究竟占用了多少时间" [level=3] [ref=e97]
+        - paragraph [ref=e98]:
+          - text: 已我当前的环境在H200+Qwen3-0.6B作为测试，这边我使用
+          - code [ref=e99]: "`nsys`"
+          - text: 和
+          - code [ref=e100]: "`Pytorch Profile`"
+          - text: ClaudeCode总结后的数据，在Batch=1的情况下eager和graph状态耗时分别是15.56ms和4.44ms，总加速到
+          - code [ref=e101]: "`3.5x`"
+          - superscript [ref=e102]:
+            - link "1" [ref=e103] [cursor=pointer]:
+              - /url: "#fn:1"
+          - text: 。后续的在H200上测试会详细的讲解如何测量这些数据
+        - table [ref=e104]:
+          - rowgroup [ref=e105]:
+            - row "阶段 位置 Eager Graph 节省/kernel 数据源" [ref=e106]:
+              - columnheader "阶段" [ref=e107]
+              - columnheader "位置" [ref=e108]
+              - columnheader "Eager" [ref=e109]
+              - columnheader "Graph" [ref=e110]
+              - columnheader "节省/kernel" [ref=e111]
+              - columnheader "数据源" [ref=e112]
+          - rowgroup [ref=e113]:
+            - 'row "PyTorch Dispatch + Kernel Launcher Prepare CPU 4-37 µs/call 取决于 op (aten::mul/add ~5 µs, aten::mm 12 µs, aten::cudnn_attention_forward 37 µs) ~0 (只在 replay 最外层) ~99% [x] torch.profiler `self_cpu_time` 实测" [ref=e114]':
+              - cell "PyTorch Dispatch + Kernel Launcher Prepare" [ref=e115]
+              - cell "CPU" [ref=e116]
+              - cell "4-37 µs/call 取决于 op (aten::mul/add ~5 µs, aten::mm 12 µs, aten::cudnn_attention_forward 37 µs)" [ref=e117]:
+                - strong [ref=e118]: 4-37 µs/call 取决于 op
+                - text: (aten::mul/add ~5 µs, aten::mm 12 µs, aten::cudnn_attention_forward 37 µs)
+              - cell "~0 (只在 replay 最外层)" [ref=e119]
+              - cell "~99%" [ref=e120]
+              - 'cell "[x] torch.profiler `self_cpu_time` 实测" [ref=e121]':
+                - text: "[x] torch.profiler"
+                - code [ref=e122]: "`self_cpu_time`"
+                - text: 实测
+            - 'row "cudaLaunchKernel() CPU 3.5 µs/call (nsys) / 4.0 µs/call (profiler) ~0 (graph 只有 1 次 cudaGraphLaunch 0.51 ms) 99%+ [x] [x] nsys `cuda_api_sum` + torch.profiler 双重验证" [ref=e123]':
+              - cell "cudaLaunchKernel()" [ref=e124]:
+                - strong [ref=e125]: cudaLaunchKernel()
+              - cell "CPU" [ref=e126]
+              - cell "3.5 µs/call (nsys) / 4.0 µs/call (profiler)" [ref=e127]:
+                - strong [ref=e128]: 3.5 µs/call
+                - text: (nsys) /
+                - strong [ref=e129]: 4.0 µs/call
+                - text: (profiler)
+              - cell "~0 (graph 只有 1 次 cudaGraphLaunch 0.51 ms)" [ref=e130]
+              - cell "99%+" [ref=e131]
+              - 'cell "[x] [x] nsys `cuda_api_sum` + torch.profiler 双重验证" [ref=e132]':
+                - text: "[x] [x] nsys"
+                - code [ref=e133]: "`cuda_api_sum`"
+                - text: + torch.profiler 双重验证
+            - row "Command processor GPU 属于 gap 近零 大部分 -" [ref=e134]:
+              - cell "Command processor" [ref=e135]
+              - cell "GPU" [ref=e136]
+              - cell "属于 gap" [ref=e137]:
+                - emphasis [ref=e138]: 属于 gap
+              - cell "近零" [ref=e139]
+              - cell "大部分" [ref=e140]
+              - cell "-" [ref=e141]
+            - 'row "Kernel Execute GPU 2.06 µs 2.24 µs -0.18 µs [x] nsys `cuda_gpu_kern_sum` 实测 (graph 略贵因为有 node metadata 开销)" [ref=e142]':
+              - cell "Kernel Execute" [ref=e143]:
+                - strong [ref=e144]: Kernel Execute
+              - cell "GPU" [ref=e145]
+              - cell "2.06 µs" [ref=e146]:
+                - strong [ref=e147]: 2.06 µs
+              - cell "2.24 µs" [ref=e148]:
+                - strong [ref=e149]: 2.24 µs
+              - cell "-0.18 µs" [ref=e150]:
+                - strong [ref=e151]: "-0.18 µs"
+              - 'cell "[x] nsys `cuda_gpu_kern_sum` 实测 (graph 略贵因为有 node metadata 开销)" [ref=e152]':
+                - text: "[x] nsys"
+                - code [ref=e153]: "`cuda_gpu_kern_sum`"
+                - text: 实测 (graph 略贵因为有 node metadata 开销)
+            - row "Post Process GPU 属于 gap 近零 大部分 -" [ref=e154]:
+              - cell "Post Process" [ref=e155]
+              - cell "GPU" [ref=e156]
+              - cell "属于 gap" [ref=e157]:
+                - emphasis [ref=e158]: 属于 gap
+              - cell "近零" [ref=e159]
+              - cell "大部分" [ref=e160]
+              - cell "-" [ref=e161]
+            - 'row "cudaLaunchKernel+Post Process GPU 7.22 µs/gap 0.31 µs/gap 6.91 µs [x] 间接实测: `(total_gpu - kernel_exec) / kernel_count`" [ref=e162]':
+              - cell "cudaLaunchKernel+Post Process" [ref=e163]:
+                - strong [ref=e164]: cudaLaunchKernel+Post Process
+              - cell "GPU" [ref=e165]
+              - cell "7.22 µs/gap" [ref=e166]:
+                - strong [ref=e167]: 7.22 µs/gap
+              - cell "0.31 µs/gap" [ref=e168]:
+                - strong [ref=e169]: 0.31 µs/gap
+              - cell "6.91 µs" [ref=e170]:
+                - strong [ref=e171]: 6.91 µs
+              - 'cell "[x] 间接实测: `(total_gpu - kernel_exec) / kernel_count`" [ref=e172]':
+                - text: "[x] 间接实测:"
+                - code [ref=e173]: "`(total_gpu - kernel_exec) / kernel_count`"
+        - heading "3. CUDA Graph" [level=2] [ref=e174]
+        - paragraph [ref=e175]: CUDA Graph是什么，其实上面的很多讨论已经回答了这个问题，用一句话总结来说就是：CUDA Graph 是一种将一系列 GPU 操作（如内核执行、内存拷贝）及其前后依赖关系预先定义为一张有向无环图（DAG），然后通过单次指令将其整体打包提交给 GPU 自动调度执行的工作模型，旨在彻底消除 CPU 频繁下达指令所带来的调度开销。
+        - img "Image" [ref=e176]
+        - paragraph [ref=e177]: 是DAG自然就有节点和边，在CUDA Graph中节点是每个GPU的操作比如说：Kernel launches/内存操作（D2H/H2D）/内存管理（malloc/free）/Host Func/空节点（用于同步和协调）。边其实没有实际的操作，只是代表一种依赖关系，比如并行/依赖。
+        - heading "3.1. Graph vs Stream：从\"事件驱动\"到\"DAG\"" [level=3] [ref=e178]
+        - paragraph [ref=e179]: 以前写 CUDA 代码，默认就是用 stream。stream 本质上是个队列——你按顺序塞进去的操作，GPU 按顺序执行。简单粗暴，但问题也很明显：
+        - code [ref=e182]:
+          - generic [ref=e184]: // Stream 模型：线性队列，CPU 逐条提交
+          - generic [ref=e186]: cudaMemcpyAsync(d_in, h_in, size, H2D, stream);
+          - generic [ref=e188]: kernelA<<<grid, block, 0, stream>>>(d_in, d_tmp); // A
+          - generic [ref=e190]: kernelB<<<grid, block, 0, stream>>>(d_tmp, d_out); // B，必须等 A 完事
+        - paragraph [ref=e191]: 如果 B 和 C 其实没有依赖关系，可以并行跑，怎么办？传统做法是多开几个 stream，然后用 event 做同步：
+        - code [ref=e194]:
+          - generic [ref=e196]: cudaStream_t s1, s2;
+          - generic [ref=e198]: cudaEvent_t ev;
+          - generic [ref=e200]: // ... 创建 stream 和 event
+          - generic [ref=e203]: kernelA<<<grid, block, 0, s1>>>();
+          - generic [ref=e205]: cudaEventRecord(ev, s1); // A 完了发个信号
+          - generic [ref=e208]: kernelB<<<grid, block, 0, s2>>>();
+          - generic [ref=e210]: cudaStreamWaitEvent(s2, ev); // B 等 A
+          - generic [ref=e212]: kernelC<<<grid, block, 0, s2>>>(); // C 也等 A，但 B 和 C 可以并行
+        - img "Image" [ref=e213]
+        - paragraph [ref=e214]: 代码马上变得又臭又长。而且这只是两个并行分支，实际推理里有几十个 kernel，手动管 event就非常麻烦
+        - paragraph [ref=e215]: Graph 的做法完全不同——你直接画一张依赖图：
+        - img "Image" [ref=e216]
+        - paragraph [ref=e217]: 不需要手动管 event，runtime 看到图结构就知道 B 和 C 可以一起跑，D 必须等它俩都完。这是声明式（declarative）vs 命令式（imperative）的区别。
+        - blockquote [ref=e218]:
+          - paragraph [ref=e219]: 图是静态的因此编译器会静态的分配好所有资源，且不需要调度。这也是双刃剑，静态意味着丧失了灵活性，这也是他主要用在推理上的原因。
+        - heading "3.2. Graph 里能放什么？" [level=3] [ref=e220]
+        - paragraph [ref=e221]: DAG 自然就有节点和边。节点是实际干活的操作，边只是依赖关系（没有实际计算）。
+        - paragraph [ref=e222]: CUDA Graph 支持的节点类型比我想象的多：
+        - table [ref=e223]:
+          - rowgroup [ref=e224]:
+            - row "节点类型 实际对应 备注" [ref=e225]:
+              - columnheader "节点类型" [ref=e226]
+              - columnheader "实际对应" [ref=e227]
+              - columnheader "备注" [ref=e228]
+          - rowgroup [ref=e229]:
+            - 'row "Kernel `kernel<<<...>>>()` 标准执行Kernel的动作" [ref=e230]':
+              - cell "Kernel" [ref=e231]
+              - 'cell "`kernel<<<...>>>()`" [ref=e232]':
+                - code [ref=e233]: "`kernel<<<...>>>()`"
+              - cell "标准执行Kernel的动作" [ref=e234]
+            - 'row "Memcpy `cudaMemcpyAsync` H2D/D2H/D2D 数据传输" [ref=e235]':
+              - cell "Memcpy" [ref=e236]
+              - 'cell "`cudaMemcpyAsync`" [ref=e237]':
+                - code [ref=e238]: "`cudaMemcpyAsync`"
+              - cell "H2D/D2H/D2D 数据传输" [ref=e239]
+            - 'row "Memset `cudaMemsetAsync` 清零 buffer" [ref=e240]':
+              - cell "Memset" [ref=e241]
+              - 'cell "`cudaMemsetAsync`" [ref=e242]':
+                - code [ref=e243]: "`cudaMemsetAsync`"
+              - cell "清零 buffer" [ref=e244]
+            - row "Host host callback function CPU 端回调，慎用（会阻塞 GPU）" [ref=e245]:
+              - cell "Host" [ref=e246]
+              - cell "host callback function" [ref=e247]
+              - cell "CPU 端回调，慎用（会阻塞 GPU）" [ref=e248]
+            - row "Child Graph 嵌套子图 可以图里套图，模块化" [ref=e249]:
+              - cell "Child Graph" [ref=e250]
+              - cell "嵌套子图" [ref=e251]
+              - cell "可以图里套图，模块化" [ref=e252]
+            - row "Empty 空操作 纯粹作为同步点用" [ref=e253]:
+              - cell "Empty" [ref=e254]
+              - cell "空操作" [ref=e255]
+              - cell "纯粹作为同步点用" [ref=e256]
+        - paragraph [ref=e257]: 对于 LLM 推理来说，绝大部分节点是 Kernel，偶尔有 Memcpy（比如从 host 拷 input_ids）。Host callback 在性能敏感路径上基本不用，因为它会强制 sync，把 GPU 卡住等 CPU 执行 callback。
+        - paragraph [ref=e258]: 边（edge）的概念更简单——就是"谁先谁后"的关系。A → B 表示 B 必须等 A 完事。如果两个节点之间没有路径相连，runtime 就会自动让它们并行。
+        - heading "3.3. 三个阶段：Define → Instantiate → Launch" [level=3] [ref=e259]
+        - paragraph [ref=e260]: CUDA Graph的生命周期分三步：
+        - paragraph [ref=e261]:
+          - strong [ref=e262]: 1. Define（定义）
+        - paragraph [ref=e263]:
+          - text: 构建图的拓扑结构——加节点、连边。这个阶段产物是
+          - code [ref=e264]: "`cudaGraph_t`"
+          - text: ，只是个"图纸"，可以修改（比如加节点、删边）。
+        - paragraph [ref=e265]:
+          - strong [ref=e266]: 2. Instantiate（实例化）
+        - paragraph [ref=e267]:
+          - text: 把图纸编译成可执行文件。CUDA 会验证拓扑合法性（比如有没有环）、预分配内部资源、生成执行计划。产物是
+          - code [ref=e268]: "`cudaGraphExec_t`"
+          - text: ，这一步之后图就"冻结"了，不能直接改结构。
+        - paragraph [ref=e269]:
+          - strong [ref=e270]: 3. Launch（启动）
+        - paragraph [ref=e271]: 把实例化的图提交到一个 stream 上执行。一次 launch = 整个 DAG 的所有操作一次性扔给 GPU。
+        - blockquote [ref=e272]:
+          - paragraph [ref=e273]:
+            - text: 为什么要分三步？核心原因是
+            - strong [ref=e274]: 开销分离
+            - text: 。Define 和 Instantiate 的代价只付一次，之后每次推理只需要付 Launch 的极小代价。如果每次都要重新 Define + Instantiate，那 Graph 的优势就没了。
+        - paragraph [ref=e275]:
+          - text: 另外，Instantiate 之后也不是完全不能改——可以通过
+          - code [ref=e276]: "`cudaGraphExecKernelNodeSetParams()`"
+          - text: 更新节点参数（比如换输入 buffer 的指针），不需要重新 Instantiate。这点对推理很重要，因为每次输入数据会变，但图的结构不变。
+        - heading "3.4. 怎么构建 Graph？两种方式" [level=3] [ref=e277]
+        - paragraph [ref=e278]:
+          - strong [ref=e279]: 方式一：Explicit API（手动拼）
+        - paragraph [ref=e280]: 直接调用 CUDA API 添加节点和边：
+        - code [ref=e283]:
+          - generic [ref=e285]: cudaGraph_t graph;
+          - generic [ref=e287]: cudaGraphCreate(&graph);
+          - generic [ref=e290]: // 添加一个 kernel 节点
+          - generic [ref=e292]: cudaGraphNode_t kernelNode;
+          - generic [ref=e294]: "cudaKernelNodeParams params = {...};"
+          - generic [ref=e296]: cudaGraphAddKernelNode(&kernelNode, graph, NULL, 0, &params);
+          - generic [ref=e299]: // 添加依赖边
+          - generic [ref=e301]: cudaGraphAddDependencies(graph, &nodeA, &nodeB, 1); // A → B
+        - paragraph [ref=e302]: 优点是控制精细，缺点是代码啰嗦。一般只在需要极致优化或者图结构动态变化时使用。
+        - paragraph [ref=e303]:
+          - strong [ref=e304]: 方式二：Stream Capture（自动录）
+        - paragraph [ref=e305]: 更常用的做法——在你现有的 stream 代码外包一层 capture，CUDA 自动帮你生成图：
+        - code [ref=e308]:
+          - generic [ref=e310]: cudaGraph_t graph;
+          - generic [ref=e312]: cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
+          - generic [ref=e315]: // 这里写你原来的代码，会被自动录下来
+          - generic [ref=e317]: kernelA<<<grid, block, 0, stream>>>();
+          - generic [ref=e319]: kernelB<<<grid, block, 0, stream>>>();
+          - generic [ref=e321]: // ...
+          - generic [ref=e324]: cudaStreamEndCapture(stream, &graph);
+        - paragraph [ref=e325]:
+          - text: PyTorch 的
+          - code [ref=e326]: "`torch.cuda.CUDAGraph`"
+          - text: 就是基于 Stream Capture 封装的。这种方式对现有代码侵入小，是推理优化的首选。
+        - separator [ref=e327]
+        - heading "4. PyTorch上如何使用CUDA Graph" [level=2] [ref=e328]
+        - paragraph [ref=e329]:
+          - text: 前面讲的都是 CUDA C++ 层面的 API，但实际项目里我用的是 PyTorch。PyTorch 提供了
+          - code [ref=e330]: "`torch.cuda.CUDAGraph`"
+          - text: ，把底层的 capture、instantiate、launch 包装成了几行 Python 代码。尤其是对于
+          - code [ref=e331]: "`capture`"
+          - text: 模式来说，官方文档给的example其实就这几行
+          - superscript [ref=e332]:
+            - link "2" [ref=e333] [cursor=pointer]:
+              - /url: "#fn:2"
+          - text: ：
+        - code [ref=e336]:
+          - generic [ref=e338]: import torch
+          - generic [ref=e341]: "# Enable CUDA Graph mode in PyTorch"
+          - generic [ref=e343]: model = YourModel().cuda()
+          - generic [ref=e345]: static_input = torch.randn(32, 3, 224, 224, device='cuda')
+          - generic [ref=e348]: "# Warmup"
+          - generic [ref=e350]: "for _ in range(3):"
+          - generic [ref=e352]: _ = model(static_input)
+          - generic [ref=e355]: "# Capture the graph"
+          - generic [ref=e357]: g = torch.cuda.CUDAGraph()
+          - generic [ref=e359]: "with torch.cuda.graph(g):"
+          - generic [ref=e361]: static_output = model(static_input)
+          - generic [ref=e364]: "# Training loop - replay the graph"
+          - generic [ref=e366]: "for data in dataloader:"
+          - generic [ref=e368]: "static_input.copy_(data) # Update input in-place"
+          - generic [ref=e370]: "g.replay() # Execute captured operations"
+        - paragraph [ref=e371]: 代码中其实也涉及到几个核心问题：
+        - list [ref=e372]:
+          - listitem [ref=e373]: 静态的输入和输出
+          - listitem [ref=e374]: warmup
+          - listitem [ref=e375]: capture限制
+        - blockquote [ref=e376]:
+          - paragraph [ref=e377]:
+            - text: 当前Pytorch CUDA Graph API只支持Capture，因为本身pytorch使用的是动态图(eager mode) 和声明式的静态图有一定的理念冲突。如果需要使用python+Explicit API 推荐直接使用
+            - code [ref=e378]: "`cuda-python`"
+            - text: 。
+        - heading "4.1. 为什么是静态" [level=3] [ref=e379]
+        - paragraph [ref=e380]:
+          - text: Graph 要求"静态"的核心原因：它录制的是
+          - strong [ref=e381]: 指针地址
+          - text: ，而不是
+          - strong [ref=e382]: 数据内容
+          - text: 。
+        - code [ref=e384]: 录制时：kernel 从 d_input=0x7f00_1000 读，往 d_output=0x7f00_2000 写 ↓ 图中记录的就是这两个具体地址 ↓ 每次 replay：GPU 去 0x7f00_1000 读，往 0x7f00_2000 写
+        - paragraph [ref=e385]:
+          - text: 如果中间你把
+          - code [ref=e386]: "`d_input`"
+          - text: 给 free 了，重新 malloc 一个，地址变成
+          - code [ref=e387]: "`0x7f00_5000`"
+          - text: ，但图还去读
+          - code [ref=e388]: "`0x7f00_1000`"
+          - text: ——直接段错误。
+        - paragraph [ref=e389]:
+          - text: 所以 Graph 的"静态"不是指数据不能变，而是
+          - strong [ref=e390]: 地址不能变
+          - text: 。实际推理时的模式是：
+        - code [ref=e393]:
+          - generic [ref=e395]: "# 1. 预分配固定 buffer（整个生命周期不释放）"
+          - generic [ref=e397]: static_input = torch.empty(max_batch, max_seq_len, device='cuda')
+          - generic [ref=e400]: "# 2. 每次推理：往固定地址填新数据"
+          - generic [ref=e402]: static_input.copy_(new_input)
+          - generic [ref=e405]: "# 3. replay：图从同一个地址读"
+          - generic [ref=e407]: g.replay()
+          - generic [ref=e410]: "# 4. 读结果：从固定地址拷出来"
+          - generic [ref=e412]: result = static_output.clone()
+        - paragraph [ref=e413]:
+          - strong [ref=e414]: 指针不变，数据变。
+          - text: 这是 Graph 能work的前提。
+        - paragraph [ref=e415]:
+          - text: PyTorch 的
+          - code [ref=e416]: "`static_input.copy_(data)`"
+          - text: 和
+          - code [ref=e417]: "`static_output.clone()`"
+          - text: 这对操作看着有点别扭——一个往里写，一个往外读——但目的都是保护图中的静态地址不被破坏。
+        - paragraph [ref=e418]:
+          - text: 除了输入输出，Graph 对模型内部的操作也有不少限制
+          - superscript [ref=e419]:
+            - link "3" [ref=e420] [cursor=pointer]:
+              - /url: "#fn:3"
+          - text: ：
+        - paragraph [ref=e421]:
+          - strong [ref=e422]: 内存分配相关（最严格的限制）
+        - list [ref=e423]:
+          - listitem [ref=e424]:
+            - code [ref=e425]: "`tensor.resize_()`"
+            - text: /
+            - code [ref=e426]: "`tensor.resize_as_()`"
+            - text: —— 可能改变底层存储地址
+          - listitem [ref=e427]: 任何导致 tensor 重新分配内存的操作 —— 比如 cat 后赋值给原变量
+          - listitem [ref=e428]: 动态创建新 tensor —— capture 期间分配的内存地址被钉住，但如果在图执行期间再分配，地址不稳定
+        - paragraph [ref=e429]:
+          - strong [ref=e430]: 同步操作
+        - list [ref=e431]:
+          - listitem [ref=e432]:
+            - code [ref=e433]: "`torch.cuda.synchronize()`"
+            - text: —— capture 期间操作不执行，sync 会死锁
+          - listitem [ref=e434]:
+            - code [ref=e435]: "`tensor.item()`"
+            - text: /
+            - code [ref=e436]: "`tensor.tolist()`"
+            - text: —— 把 GPU 数据拷到 CPU，隐含同步
+          - listitem [ref=e437]:
+            - code [ref=e438]: "`print(tensor)`"
+            - text: —— 同上，要读值就必须 sync
+        - paragraph [ref=e439]:
+          - strong [ref=e440]: 数据依赖的控制流
+        - list [ref=e441]:
+          - listitem [ref=e442]:
+            - code [ref=e443]: "`if tensor.sum() > 0:`"
+            - text: —— 条件依赖 tensor 的值，但 capture 期间值不存在
+          - listitem [ref=e444]:
+            - code [ref=e445]: "`for i in range(tensor.size(0)):`"
+            - text: —— 如果 size 是动态的，每次可能不一样
+          - listitem [ref=e446]: 任何需要知道 tensor 具体值才能决定走哪条分支的代码
+        - paragraph [ref=e447]:
+          - strong [ref=e448]: 一些安全替代方案
+        - code [ref=e451]:
+          - generic [ref=e453]: "# 不安全"
+          - generic [ref=e455]: "if x.sum() > 0:"
+          - generic [ref=e457]: y = x * 2
+          - generic [ref=e459]: "else:"
+          - generic [ref=e461]: y = x + 1
+          - generic [ref=e464]: "# 安全 —— 用 mask 代替分支"
+          - generic [ref=e466]: mask = (x > 0).float()
+          - generic [ref=e468]: y = mask * (x * 2) + (1 - mask) * (x + 1)
+          - generic [ref=e471]: "# 不安全"
+          - generic [ref=e473]: "for i in range(batch_size): # batch_size 是 tensor 的值"
+          - generic [ref=e475]: process(x[i])
+          - generic [ref=e478]: "# 安全 —— 用固定次数的循环"
+          - generic [ref=e480]: "for i in range(MAX_BATCH): # MAX_BATCH 是常量"
+          - generic [ref=e482]: "if i < batch_size:"
+          - generic [ref=e484]: process(x[i])
+        - paragraph [ref=e485]:
+          - text: 简单来说：
+          - strong [ref=e486]: 图的拓扑结构必须是固定的
+          - text: ，不能依赖运行时数据做任何决策。
+        - heading "4.2. 为什么 Warmup 是必须的？" [level=3] [ref=e487]
+        - paragraph [ref=e488]: 一开始我以为 warmup 只是"让性能稳定"，后来发现没有它根本 capture 不对。
+        - paragraph [ref=e489]: PyTorch 很多操作是 lazy 的：
+        - list [ref=e490]:
+          - listitem [ref=e491]: cuDNN 卷积第一次会 benchmark 不同算法
+          - listitem [ref=e492]: JIT 编译的 kernel 第一次调用时才编译
+          - listitem [ref=e493]: cuBLAS workspace 第一次 matmul 时才分配
+        - paragraph [ref=e494]: 这些"第一次"会产生额外的内存分配和 kernel launch。如果在 capture 期间触发，会被录进图里——之后每次 replay 都重新选算法/编译，完全不对。
+        - paragraph [ref=e495]:
+          - strong [ref=e496]: Warmup 的作用：提前触发所有 lazy 初始化，让 capture 只录到"稳态"的操作序列。
+        - paragraph [ref=e497]: 为什么通常跑 3 次？第 1 次触发 cuDNN benchmark 和 JIT 编译，第 2 次某些 allocator 策略可能调整，第 3 次确认真的稳态了。
+        - heading "4.3. Capture 期间的限制" [level=3] [ref=e498]
+        - paragraph [ref=e499]: capture期间其实类似我们开发软件的时候的MOCK执行，很多行为都是被mock掉的，而不是真实执行的，只是通过mock+capture快速的从算子流中捕获整体的图，因此除了之前的静态的限制还有如下限制：
+        - list [ref=e500]:
+          - listitem [ref=e501]:
+            - strong [ref=e502]: 同步操作会死锁
+        - code [ref=e505]:
+          - generic [ref=e507]: "# 错误：capture 期间 sync 会卡住"
+          - generic [ref=e509]: "with torch.cuda.graph(g):"
+          - generic [ref=e511]: x = model(input)
+          - generic [ref=e513]: "torch.cuda.synchronize() # 死锁！操作根本没执行，你在等一个永远不会完成的事"
+        - paragraph [ref=e514]: sync 要等操作完成，但 capture 期间操作是 mock 的，没真跑，所以 sync 永远等不到。
+        - list [ref=e515]:
+          - listitem [ref=e516]:
+            - strong [ref=e517]: 不能读 tensor 的值
+        - code [ref=e520]:
+          - generic [ref=e522]: "# 错误：capture 期间 tensor 的值不存在"
+          - generic [ref=e524]: "with torch.cuda.graph(g):"
+          - generic [ref=e526]: x = model(input)
+          - generic [ref=e528]: "print(x[0]) # 报错：无法读取值"
+          - generic [ref=e530]: "if x.sum() > 0: # 报错：条件依赖值"
+          - generic [ref=e532]: ...
+        - paragraph [ref=e533]: 这限制比想象中严。比如你想打个 log 看中间结果，在 capture 期间是完全做不到的。只能先 capture 完，replay 的时候再想办法看。
+        - list [ref=e534]:
+          - listitem [ref=e535]:
+            - strong [ref=e536]: 控制流必须静态
+        - code [ref=e539]:
+          - generic [ref=e541]: "# 错误：依赖 tensor 值的控制流"
+          - generic [ref=e543]: "with torch.cuda.graph(g):"
+          - generic [ref=e545]: "for i in range(seq_len): # seq_len 如果是 tensor 的值，不行"
+          - generic [ref=e547]: process(x[i])
+          - generic [ref=e550]: "# 正确：用固定次数 + mask"
+          - generic [ref=e552]: "with torch.cuda.graph(g):"
+          - generic [ref=e554]: "for i in range(MAX_LEN): # MAX_LEN 是 Python 常量"
+          - generic [ref=e556]: mask = (i < seq_len).float()
+          - generic [ref=e558]: out += mask * process(x[i])
+        - paragraph [ref=e559]: 实际推理里 seq_len 每次可能不一样，但图结构必须固定。解决办法是用最大长度循环，然后用 mask 把无效位置置零。
+        - heading "5. 真实推理引擎的中的CUDA Graph:" [level=2] [ref=e560]
+        - paragraph [ref=e561]: 推理引擎中的CUDA Graph使用比较广泛，但是对于推理server，因为请求有多有少，因此在decode推理的时候对静态CUDA Graph也是一个挑战。现代的推理引擎比如说vLLM、Sglang、TensorRT-LLM 通常使用分桶的方式，通过在初始化的时候捕获一组不同输入Batch的CUDA Graph在推理的时候重放，逻辑如图：
+        - img "Image" [ref=e562]
+        - paragraph [ref=e563]:
+          - text: 这也是sglang参数
+          - code [ref=e564]: "`--cuda-graph-bs`"
+          - text: 设置参数的含义。
+        - heading "6. CUDA Graph究竟能加速多少" [level=2] [ref=e565]
+        - paragraph [ref=e566]: 这里我使用Qwen3-0.6B 在H200上进行测试，代码如下
+        - code [ref=e569]:
+          - generic [ref=e572]: from __future__ import annotations
+          - generic [ref=e575]: import json
+          - generic [ref=e577]: import statistics
+          - generic [ref=e579]: import time
+          - generic [ref=e582]: import torch
+          - generic [ref=e584]: from transformers import StaticCache
+          - generic [ref=e587]: MODEL_ID = "Qwen/Qwen3-0.6B"
+          - generic [ref=e589]: DEVICE = "cuda:0"
+          - generic [ref=e591]: DTYPE = torch.bfloat16
+          - generic [ref=e594]: "# 测量参数"
+          - generic [ref=e596]: PROMPT = "The key difference between CUDA streams and CUDA graphs is"
+          - generic [ref=e598]: NUM_DECODE_TOKENS = 128
+          - generic [ref=e600]: WARMUP_STEPS = 10
+          - generic [ref=e603]: RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
+          - generic [ref=e607]: "@dataclass"
+          - generic [ref=e609]: "class LoadedModel:"
+          - generic [ref=e611]: "model: torch.nn.Module"
+          - generic [ref=e613]: "tokenizer: AutoTokenizer"
+          - generic [ref=e617]: "def load_model() -> LoadedModel:"
+          - generic [ref=e619]: "\"\"\"加载 Qwen3-0.6B。eval + no_grad 在调用侧处理。\"\"\""
+          - generic [ref=e621]: tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+          - generic [ref=e623]: model = AutoModelForCausalLM.from_pretrained(
+          - generic [ref=e625]: MODEL_ID,
+          - generic [ref=e627]: torch_dtype=DTYPE,
+          - generic [ref=e629]: attn_implementation="sdpa",
+          - generic [ref=e631]: ).to(DEVICE)
+          - generic [ref=e633]: model.eval()
+          - generic [ref=e635]: return LoadedModel(model=model, tokenizer=tokenizer)
+          - generic [ref=e639]: "def encode_prompt(tokenizer, prompt: str = PROMPT) -> torch.Tensor:"
+          - generic [ref=e641]: "\"\"\"Prompt → input_ids on device. Shape: [1, prompt_len].\"\"\""
+          - generic [ref=e643]: return tokenizer(prompt, return_tensors="pt").input_ids.to(DEVICE)
+          - generic [ref=e647]: "def _prefill(model, input_ids, cache):"
+          - generic [ref=e649]: "\"\"\"Prefill 走 eager. 返回首个 decode token 和 next cache_position.\"\"\""
+          - generic [ref=e651]: prompt_len = input_ids.shape[1]
+          - generic [ref=e653]: cache_position = torch.arange(prompt_len, dtype=torch.int64, device=DEVICE)
+          - generic [ref=e655]: out = model(
+          - generic [ref=e657]: input_ids=input_ids,
+          - generic [ref=e659]: past_key_values=cache,
+          - generic [ref=e661]: cache_position=cache_position,
+          - generic [ref=e663]: use_cache=True,
+          - generic [ref=e665]: )
+          - generic [ref=e667]: next_tokens = out.logits[:, -1:, :].argmax(dim=-1)
+          - generic [ref=e669]: next_cache_position = cache_position[-1:] + 1
+          - generic [ref=e671]: return next_tokens, next_cache_position
+          - generic [ref=e675]: "def _eager_decode_step(model, cache, input_ids, cache_position):"
+          - generic [ref=e677]: "\"\"\"跑一步 decode. 用于 warmup / 为 capture 准备 cuBLAS workspace.\"\"\""
+          - generic [ref=e679]: out = model(
+          - generic [ref=e681]: input_ids=input_ids,
+          - generic [ref=e683]: past_key_values=cache,
+          - generic [ref=e685]: cache_position=cache_position,
+          - generic [ref=e687]: use_cache=True,
+          - generic [ref=e689]: )
+          - generic [ref=e691]: return out
+          - generic [ref=e695]: "@torch.no_grad()"
+          - generic [ref=e697]: "def run_graphed() -> dict:"
+          - generic [ref=e699]: loaded = load_model()
+          - generic [ref=e701]: model, tokenizer = loaded.model, loaded.tokenizer
+          - generic [ref=e703]: input_ids = encode_prompt(tokenizer)
+          - generic [ref=e705]: prompt_len = input_ids.shape[1]
+          - generic [ref=e707]: max_cache_len = prompt_len + NUM_DECODE_TOKENS + 16
+          - generic [ref=e710]: "# ─────────────────────────────────────────────"
+          - generic [ref=e712]: "# 一次性 cache: 从头到尾只建一个"
+          - generic [ref=e714]: "# 原因: graph 捕获到的 cache 指针必须在 replay 时依然有效"
+          - generic [ref=e716]: "# ─────────────────────────────────────────────"
+          - generic [ref=e718]: cache = StaticCache(
+          - generic [ref=e720]: config=model.config, max_cache_len=max_cache_len, device=DEVICE, dtype=DTYPE,
+          - generic [ref=e722]: )
+          - generic [ref=e725]: "print(f\"[setup] prefill + {WARMUP_STEPS} eager warmup decode steps ...\")"
+          - generic [ref=e727]: next_tokens, next_cache_position = _prefill(model, input_ids, cache)
+          - generic [ref=e729]: out = None
+          - generic [ref=e731]: "for _ in range(WARMUP_STEPS):"
+          - generic [ref=e733]: out = _eager_decode_step(model, cache, next_tokens, next_cache_position)
+          - generic [ref=e735]: next_tokens = out.logits[:, -1:, :].argmax(dim=-1)
+          - generic [ref=e737]: next_cache_position = next_cache_position + 1
+          - generic [ref=e739]: torch.cuda.synchronize()
+          - generic [ref=e742]: "# 静态输入输出"
+          - generic [ref=e744]: "static_input_ids = next_tokens.clone() # [1, 1]"
+          - generic [ref=e746]: "static_cache_position = next_cache_position.clone() # [1]"
+          - generic [ref=e749]: print("[capture] recording decode graph ...")
+          - generic [ref=e753]: s = torch.cuda.Stream()
+          - generic [ref=e755]: g = torch.cuda.CUDAGraph()
+          - generic [ref=e759]: s.wait_stream(torch.cuda.current_stream())
+          - generic [ref=e761]: "with torch.cuda.stream(s):"
+          - generic [ref=e763]: "for _ in range(3):"
+          - generic [ref=e765]: out = model(
+          - generic [ref=e767]: input_ids=static_input_ids,
+          - generic [ref=e769]: past_key_values=cache,
+          - generic [ref=e771]: cache_position=static_cache_position,
+          - generic [ref=e773]: use_cache=True,
+          - generic [ref=e775]: )
+          - generic [ref=e777]: torch.cuda.current_stream().wait_stream(s)
+          - generic [ref=e783]: "with torch.cuda.graph(g):"
+          - generic [ref=e785]: out = model(
+          - generic [ref=e787]: input_ids=static_input_ids,
+          - generic [ref=e789]: past_key_values=cache,
+          - generic [ref=e791]: cache_position=static_cache_position,
+          - generic [ref=e793]: use_cache=True,
+          - generic [ref=e795]: )
+          - generic [ref=e797]: static_output_logits = out.logits
+          - generic [ref=e800]: "# 重置 cache 状态 + 重做 prefill"
+          - generic [ref=e802]: "# 关键: StaticCache 内部有一个 cumulative_length 计数器, 每次 forward 都 +="
+          - generic [ref=e804]: "# input_len (不管 cache_position 是否复用). 如果不 reset, 它会一路涨到超过"
+          - generic [ref=e806]: "# max_cache_len, 导致某处 index_copy_ 触发 \"index out of bounds\"."
+          - generic [ref=e808]: "# cache.reset() 会把 keys/values 清零, 并把 cumulative_length.zero_()."
+          - generic [ref=e810]: "# 注意: 这只是零内容, 地址不变——这正是 graph 依赖的前提, 所以 reset 不影响 g."
+          - generic [ref=e812]: cache.reset()
+          - generic [ref=e815]: next_tokens, next_cache_position = _prefill(model, input_ids, cache)
+          - generic [ref=e817]: static_input_ids.copy_(next_tokens)
+          - generic [ref=e819]: static_cache_position.copy_(next_cache_position)
+          - generic [ref=e821]: torch.cuda.synchronize()
+          - generic [ref=e825]: "# 测量: 用 graph.replay() 代替 model() 做 decode loop"
+          - generic [ref=e827]: "events_pair: list[tuple[torch.cuda.Event, torch.cuda.Event]] = []"
+          - generic [ref=e830]: t0 = time.perf_counter()
+          - generic [ref=e832]: "for step in range(NUM_DECODE_TOKENS - 1): # -1 因为 prefill 已经产生了第一个 token"
+          - generic [ref=e834]: step_start = torch.cuda.Event(enable_timing=True)
+          - generic [ref=e836]: step_end = torch.cuda.Event(enable_timing=True)
+          - generic [ref=e839]: step_start.record()
+          - generic [ref=e841]: g.replay()
+          - generic [ref=e843]: step_end.record()
+          - generic [ref=e845]: events_pair.append((step_start, step_end))
+          - generic [ref=e848]: "# 用 replay 的输出产生下一步输入. copy_() 原地更新静态 buffer"
+          - generic [ref=e850]: next_tokens = static_output_logits[:, -1:, :].argmax(dim=-1)
+          - generic [ref=e852]: static_input_ids.copy_(next_tokens)
+          - generic [ref=e854]: "static_cache_position.add_(1) # 原地 +1"
+          - generic [ref=e857]: torch.cuda.synchronize()
+          - generic [ref=e859]: t1 = time.perf_counter()
+          - generic [ref=e861]: total_wall_ms = (t1 - t0) * 1000
+          - generic [ref=e863]: per_step_gpu_ms = [s.elapsed_time(e) for s, e in events_pair]
+          - generic [ref=e868]: "# 统计"
+          - generic [ref=e870]: "decode_ms = per_step_gpu_ms # 这里全部是 decode (prefill 在外面)"
+          - generic [ref=e872]: "result = {"
+          - generic [ref=e874]: "\"model\": MODEL_ID,"
+          - generic [ref=e876]: "\"dtype\": \"bfloat16\","
+          - generic [ref=e878]: "\"cache\": \"static\","
+          - generic [ref=e880]: "\"attention\": \"sdpa\","
+          - generic [ref=e882]: "\"mode\": \"graphed\","
+          - generic [ref=e884]: "\"max_cache_len\": max_cache_len,"
+          - generic [ref=e886]: "\"prompt_len\": prompt_len,"
+          - generic [ref=e888]: "\"num_decode_tokens\": len(decode_ms),"
+          - generic [ref=e890]: "\"decode_per_step_ms\": decode_ms,"
+          - generic [ref=e892]: "\"decode_stats\": {"
+          - generic [ref=e894]: "\"mean\": statistics.mean(decode_ms),"
+          - generic [ref=e896]: "\"median\": statistics.median(decode_ms),"
+          - generic [ref=e898]: "\"stdev\": statistics.stdev(decode_ms) if len(decode_ms) > 1 else 0.0,"
+          - generic [ref=e900]: "\"min\": min(decode_ms),"
+          - generic [ref=e902]: "\"max\": max(decode_ms),"
+          - generic [ref=e904]: "},"
+          - generic [ref=e906]: "\"total_wall_ms\": total_wall_ms,"
+          - generic [ref=e908]: "\"total_gpu_ms\": sum(per_step_gpu_ms),"
+          - generic [ref=e910]: "\"cpu_overhead_ms\": total_wall_ms - sum(per_step_gpu_ms),"
+          - generic [ref=e912]: "}"
+          - generic [ref=e916]: "print(f\"\\n[graphed] decode mean: {result['decode_stats']['mean']:.3f} ms/step\")"
+          - generic [ref=e918]: "print(f\"[graphed] decode stdev: {result['decode_stats']['stdev']:.3f} ms\")"
+          - generic [ref=e920]: "print(f\"[graphed] total wall: {total_wall_ms:.1f} ms\")"
+          - generic [ref=e922]: "print(f\"[graphed] CPU overhead: {result['cpu_overhead_ms']:.1f} ms \""
+          - generic [ref=e924]: "f\"({result['cpu_overhead_ms']/total_wall_ms*100:.2f}%)\")"
+          - generic [ref=e926]: "print(f\"[graphed] saved → {out_path}\")"
+          - generic [ref=e928]: return result
+          - generic [ref=e932]: "if __name__ == \"__main__\":"
+          - generic [ref=e934]: run_graphed()
+        - heading "6.1. 结果" [level=3] [ref=e935]
+        - table [ref=e936]:
+          - rowgroup [ref=e937]:
+            - row "指标 eager (StaticCache) graph 倍率" [ref=e938]:
+              - columnheader "指标" [ref=e939]
+              - columnheader "eager (StaticCache)" [ref=e940]
+              - columnheader "graph" [ref=e941]
+              - columnheader "倍率" [ref=e942]
+          - rowgroup [ref=e943]:
+            - row "decode mean 16.43 ms 4.50 ms 3.65×" [ref=e944]:
+              - cell "decode mean" [ref=e945]
+              - cell "16.43 ms" [ref=e946]
+              - cell "4.50 ms" [ref=e947]
+              - cell "3.65×" [ref=e948]
+            - row "decode stdev 0.106 ms 0.072 ms 1.47×" [ref=e949]:
+              - cell "decode stdev" [ref=e950]
+              - cell "0.106 ms" [ref=e951]
+              - cell "0.072 ms" [ref=e952]
+              - cell "1.47×" [ref=e953]
+            - row "decode min 16.26 ms 4.49 ms —" [ref=e954]:
+              - cell "decode min" [ref=e955]
+              - cell "16.26 ms" [ref=e956]
+              - cell "4.49 ms" [ref=e957]
+              - cell "—" [ref=e958]
+            - row "decode max 17.00 ms 5.30 ms —" [ref=e959]:
+              - cell "decode max" [ref=e960]
+              - cell "17.00 ms" [ref=e961]
+              - cell "5.30 ms" [ref=e962]
+              - cell "—" [ref=e963]
+            - row "total wall 2108 ms 574 ms 3.67×" [ref=e964]:
+              - cell "total wall" [ref=e965]
+              - cell "2108 ms" [ref=e966]
+              - cell "574 ms" [ref=e967]
+              - cell "3.67×" [ref=e968]
+        - paragraph [ref=e969]: "分桶的结果:"
+        - img "Image" [ref=e970]
+        - heading "6.2. nsys观察到的现象" [level=3] [ref=e971]
+        - paragraph [ref=e972]: 所有的Kernel操作不需要等待合并为一个Graph
+        - img "Image" [ref=e973]
+        - paragraph [ref=e974]: "Eager:"
+        - img "Image" [ref=e975]
+        - heading "7. 总结" [level=2] [ref=e976]
+        - paragraph [ref=e977]: 捋完这一圈，关于 CUDA Graph 使用大概有这几个结论：
+        - paragraph [ref=e978]:
+          - strong [ref=e979]: 什么场景值得用
+        - list [ref=e980]:
+          - listitem [ref=e981]: Decode 阶段收益最明显。Prefill 的 kernel 大，launch 开销占比小；Decode 全是 tiny kernel，CPU 提交成了瓶颈。实测 Qwen3-0.6B 在 H200 上 decode 能快 3.6 倍，这个差距在更小模型上会更夸张。
+          - listitem [ref=e982]: Batch size 固定或者变化范围小的服务场景。动态 shape 是 Graph 的天敌，要么预分配最大 buffer 浪费内存，要么维护一堆不同尺寸的 graph。
+          - listitem [ref=e983]: 已经做完算子融合的模型。如果 kernel 数量还是上百个，Graph 的收益会被摊薄。
+        - paragraph [ref=e984]:
+          - strong [ref=e985]: 主要的代价和限制
+        - list [ref=e986]:
+          - listitem [ref=e987]: 内存。StaticCache + Graph 的静态 buffer，意味着要按最大可能长度预分配，显存占用比动态分配高。
+          - listitem [ref=e988]: 灵活性。控制流必须用 mask 代替分支，调试时不能 print 中间结果，调试特别困哪
+          - listitem [ref=e989]: 首次捕获的 overhead。Warmup + Capture 要花几十到几百毫秒，对冷启动敏感的场景是个问题。
+        - heading "8. 参考" [level=2] [ref=e990]
+        - separator [ref=e991]
+        - paragraph [ref=e992]:
+          - link "查看原始Issue" [ref=e993] [cursor=pointer]:
+            - /url: https://github.com/luyanfcp/note-snippet/issues/15
+      - generic [ref=e994]:
+        - link "Release" [ref=e995] [cursor=pointer]:
+          - /url: https://example.org/tags/release
+        - link "CUDA" [ref=e996] [cursor=pointer]:
+          - /url: https://example.org/tags/cuda
+        - link "LLM" [ref=e997] [cursor=pointer]:
+          - /url: https://example.org/tags/llm
+      - navigation [ref=e998]:
+        - link "如何让hugo支持infographic →" [ref=e999] [cursor=pointer]:
+          - /url: https://example.org/posts/note-snippet-13-%E5%A6%82%E4%BD%95%E8%AE%A9hugo%E6%94%AF%E6%8C%81infographic/
+          - generic [ref=e1000]: 如何让hugo支持infographic
+          - generic [ref=e1001]: →
+    - complementary:
+      - complementary [ref=e1002]:
+        - text: "1."
+        - paragraph [ref=e1003]:
+          - link "nvidia的文档" [ref=e1004] [cursor=pointer]:
+            - /url: https://docs.nvidia.com/dl-cuda-graph/cuda-graph-basics/introduction.html#sources-of-launch-overhead
+          - text: 提到的范围是之前硬件+低版本Pytorch上的开销，每一代CUDA都在优化cudaLaunchKernel的时间。对现代 ML 框架（PyTorch eager, TensorFlow, JAX），Python transition成本很低。因此实际数据与占比分布可能与官方数据有差距。
+      - complementary [ref=e1005]:
+        - text: "2."
+        - paragraph [ref=e1006]:
+          - link "https://docs.nvidia.com/dl-cuda-graph/latest/index.html#quick-start" [ref=e1007] [cursor=pointer]:
+            - /url: https://docs.nvidia.com/dl-cuda-graph/latest/index.html#quick-start
+      - complementary [ref=e1008]:
+        - text: "3."
+        - paragraph [ref=e1009]:
+          - link "Writing CUDA Graph-Compatible Code" [ref=e1010] [cursor=pointer]:
+            - /url: https://docs.nvidia.com/dl-cuda-graph/latest/torch-cuda-graph/best-practices.html#writing-cuda-graph-compatible-code
+  - contentinfo [ref=e1011]:
+    - generic [ref=e1012]:
+      - text: ©
+      - link "0xNullPath" [ref=e1013] [cursor=pointer]:
+        - /url: https://blog.0xnullpath.work
+      - text: "2023 – {Year} |"
+      - link "Github" [ref=e1014] [cursor=pointer]:
+        - /url: https://github.com/LuYanFCP
+      - text: "|"
+      - link "Twitter" [ref=e1015] [cursor=pointer]:
+        - /url: https://twitter.com/luyanfcp
+    - link "powered by hugo" [ref=e1016] [cursor=pointer]:
+      - /url: https://gohugo.io/
+    - link "hugo-paper" [ref=e1017] [cursor=pointer]:
+      - /url: https://github.com/nanxiaobei/hugo-paper

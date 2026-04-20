@@ -1,0 +1,253 @@
+/* Goldmark alerts */
+.markdown-alert {
+  margin: 1.5em 0;
+  padding: 1em 1.125em;
+  border-left: 4px solid;
+  border-radius: 0.75rem;
+}
+
+.markdown-alert > :first-child {
+  margin-top: 0;
+}
+
+.markdown-alert > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.markdown-alert-title svg {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  fill: currentColor;
+}
+
+.markdown-alert-note {
+  border-left-color: #0969da;
+  background: #ddf4ff;
+}
+
+.markdown-alert-note .markdown-alert-title {
+  color: #0969da;
+}
+
+.markdown-alert-tip {
+  border-left-color: #1a7f37;
+  background: #dafbe1;
+}
+
+.markdown-alert-tip .markdown-alert-title {
+  color: #1a7f37;
+}
+
+.markdown-alert-important {
+  border-left-color: #8250df;
+  background: #fbefff;
+}
+
+.markdown-alert-important .markdown-alert-title {
+  color: #8250df;
+}
+
+.markdown-alert-warning {
+  border-left-color: #9a6700;
+  background: #fff8c5;
+}
+
+.markdown-alert-warning .markdown-alert-title {
+  color: #9a6700;
+}
+
+.markdown-alert-caution {
+  border-left-color: #cf222e;
+  background: #ffebe9;
+}
+
+.markdown-alert-caution .markdown-alert-title {
+  color: #cf222e;
+}
+
+.dark .markdown-alert-note {
+  background: rgba(9, 105, 218, 0.16);
+}
+
+.dark .markdown-alert-note .markdown-alert-title {
+  color: #84bfff;
+}
+
+.dark .markdown-alert-tip {
+  background: rgba(26, 127, 55, 0.18);
+}
+
+.dark .markdown-alert-tip .markdown-alert-title {
+  color: #7ee787;
+}
+
+.dark .markdown-alert-important {
+  background: rgba(130, 80, 223, 0.18);
+}
+
+.dark .markdown-alert-important .markdown-alert-title {
+  color: #c297ff;
+}
+
+.dark .markdown-alert-warning {
+  background: rgba(154, 103, 0, 0.2);
+}
+
+.dark .markdown-alert-warning .markdown-alert-title {
+  color: #e3b341;
+}
+
+.dark .markdown-alert-caution {
+  background: rgba(207, 34, 46, 0.16);
+}
+
+.dark .markdown-alert-caution .markdown-alert-title {
+  color: #ff938a;
+}
+
+/* Sidenotes */
+@media (min-width: 900px) {
+  :root {
+    --content-column-width: min(860px, calc(100vw - 18rem));
+    --ref-column-gap: 32px;
+    --ref-column-width: 220px;
+    --layout-total-width: calc(
+      var(--content-column-width) + var(--ref-column-gap) + var(--ref-column-width)
+    );
+  }
+
+  body > header.mx-auto,
+  body > main.mx-auto,
+  body > footer.mx-auto {
+    width: var(--content-column-width) !important;
+    max-width: none !important;
+    margin-left: max(4rem, calc((100vw - var(--layout-total-width)) / 2)) !important;
+    margin-right: auto !important;
+  }
+
+  body > header.mx-auto {
+    justify-content: flex-start !important;
+  }
+
+  body > main.mx-auto {
+    overflow: visible !important;
+    left: 0 !important;
+    font-size: 0.94rem !important;
+  }
+
+  body > main.mx-auto table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed;
+  }
+
+  body > main.mx-auto th,
+  body > main.mx-auto td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    vertical-align: top;
+  }
+
+  body > footer.mx-auto {
+    padding-top: 0.25rem;
+  }
+}
+
+.footnote-ref {
+  font-size: 0.75em;
+  vertical-align: super;
+  text-decoration: none;
+  color: #fc7100;
+}
+
+.sidenote-rail {
+  position: absolute;
+  top: 0;
+  pointer-events: none;
+}
+
+.sidenote {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  font-size: 0.75em;
+  line-height: 1.65;
+  color: rgba(0, 0, 0, 0.64);
+  border-left: 1px solid rgba(0, 0, 0, 0.12);
+  padding-left: 0.9em;
+  pointer-events: auto;
+}
+
+.dark .sidenote {
+  color: rgba(255, 255, 255, 0.62);
+  border-left-color: rgba(255, 255, 255, 0.16);
+}
+
+.sidenote p {
+  margin: 0 0 0.5em;
+}
+
+.sidenote p:last-child {
+  margin-bottom: 0;
+}
+
+.sidenote .sidenote-number {
+  margin-right: 0.3em;
+  font-weight: 700;
+  color: #fc7100;
+}
+
+.sidenote a {
+  color: inherit;
+  text-decoration: underline;
+  word-break: break-word;
+}
+
+.footnotes.sidenotes-active {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .sidenote {
+    display: none !important;
+  }
+
+  .footnotes.sidenotes-active {
+    display: block;
+  }
+
+  .footnotes {
+    margin-top: 2em;
+    padding-top: 1em;
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+    font-size: 0.9em;
+    color: rgba(0, 0, 0, 0.64);
+  }
+
+  .dark .footnotes {
+    border-top-color: rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.62);
+  }
+
+  .footnotes ol {
+    padding-left: 1.5em;
+  }
+
+  .footnotes li {
+    margin-bottom: 0.5em;
+  }
+
+  .footnote-backref {
+    margin-left: 0.3em;
+    text-decoration: none;
+  }
+}

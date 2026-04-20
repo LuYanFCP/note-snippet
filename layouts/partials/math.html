@@ -1,0 +1,35 @@
+{{- if site.Params.localKatex -}}
+<link rel="stylesheet" href="{{- "katex.min.css" | relURL -}}" />
+<script defer src="{{- "katex.min.js" | relURL -}}"></script>
+<script defer src="{{- "auto-render.min.js" | relURL -}}"></script>
+{{- else -}}
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+  crossorigin="anonymous"
+/>
+<script
+  defer
+  src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+  crossorigin="anonymous"
+></script>
+<script
+  defer
+  src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  crossorigin="anonymous"
+></script>
+{{- end -}}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '\\[', right: '\\]', display: true },
+        { left: '$', right: '$', display: false },
+        { left: '\\(', right: '\\)', display: false },
+      ],
+      throwOnError: false,
+    });
+  });
+</script>

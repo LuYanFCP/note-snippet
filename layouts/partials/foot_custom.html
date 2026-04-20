@@ -11,3 +11,49 @@
 
 <!-- AntV Infographic -->
 <script src="https://unpkg.com/@antv/infographic@latest/dist/infographic.min.js"></script>
+
+<!-- Sidenotes: convert bottom footnotes to margin notes on wide screens -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.innerWidth < 1200) return;
+
+  var footnotesSection = document.querySelector('.footnotes');
+  if (!footnotesSection) return;
+
+  var refs = document.querySelectorAll('a.footnote-ref');
+  var success = true;
+
+  refs.forEach(function(ref) {
+    var href = ref.getAttribute('href'); // e.g. "#fn:1"
+    var id = href.replace('#', '');
+    var li = document.getElementById(id);
+    if (!li) { success = false; return; }
+
+    // Clone content, remove backref link
+    var content = li.cloneNode(true);
+    var backref = content.querySelector('.footnote-backref');
+    if (backref) backref.remove();
+
+    // Get the footnote number from the ref text
+    var num = ref.textContent;
+
+    // Create sidenote element
+    var sidenote = document.createElement('span');
+    sidenote.className = 'sidenote';
+    sidenote.innerHTML = '<span class="sidenote-number">' + num + '.</span> ' + content.innerHTML;
+
+    // Find the parent block element to position relative to
+    var refParent = ref.closest('p, li, td, blockquote, div');
+    if (!refParent) { success = false; return; }
+
+    // Make parent relatively positioned for absolute sidenote
+    refParent.style.position = 'relative';
+    refParent.appendChild(sidenote);
+  });
+
+  // Hide bottom footnotes if all sidenotes were created
+  if (success && refs.length > 0) {
+    footnotesSection.classList.add('sidenotes-active');
+  }
+});
+</script>

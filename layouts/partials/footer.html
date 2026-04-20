@@ -1,0 +1,149 @@
+<footer
+  class="mx-auto flex h-[4.5rem] max-w-(--w) items-center px-8 text-xs tracking-wider uppercase opacity-60"
+>
+  <div class="mr-auto normal-case tracking-normal">
+    {{- if site.Params.footer -}}
+    {{- $footer := replace site.Params.footer "{Year}" (printf "%d" now.Year) -}}
+    {{- $footer | markdownify | replaceRE "(?s)^<p>(.*)</p>\n?$" "$1" | safeHTML -}}
+    {{- else if site.Copyright -}}
+    {{- site.Copyright -}}
+    {{- else -}}
+    &copy; {{- now.Year }}
+    <a class="link" href="{{- `` | absURL -}}">{{- site.Title -}}</a>
+    {{- end -}}
+  </div>
+  <a class="link mx-6" href="https://gohugo.io/" rel="noopener" target="_blank"
+    >powered by hugo</a
+  >
+  <a
+    class="link"
+    href="https://github.com/nanxiaobei/hugo-paper"
+    rel="noopener"
+    target="_blank"
+    >hugo-paper</a
+  >
+</footer>
+
+{{- if .Store.Get "hasInfographic" -}}
+<script src="https://unpkg.com/@antv/infographic@latest/dist/infographic.min.js"></script>
+{{- end -}}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var main = document.querySelector('main');
+    var footnotesSection = document.querySelector('.footnotes');
+    if (!main || !footnotesSection) return;
+
+    function clearSidenotes() {
+      var rail = main.querySelector('.sidenote-rail');
+      if (rail) rail.remove();
+      footnotesSection.classList.remove('sidenotes-active');
+      main.style.removeProperty('min-height');
+    }
+
+    function layoutSidenotes() {
+      clearSidenotes();
+
+      if (window.innerWidth < 900) return;
+
+      var mainRect = main.getBoundingClientRect();
+      var railGap = 32;
+      var rightGutter = window.innerWidth - mainRect.right;
+      var railWidth = Math.min(220, rightGutter - railGap - 16);
+      if (railWidth < 140) return;
+
+      var refs = Array.from(document.querySelectorAll('a.footnote-ref'));
+      if (!refs.length) return;
+
+      var rail = document.createElement('aside');
+      rail.className = 'sidenote-rail';
+      rail.style.left = 'calc(100% + ' + railGap + 'px)';
+      rail.style.width = railWidth + 'px';
+      main.appendChild(rail);
+
+      var railLeft = mainRect.right + railGap;
+      var blockers = Array.from(
+        main.querySelectorAll('table, pre, .highlight, figure, img, video, iframe'),
+      ).map(function (el) {
+        var rect = el.getBoundingClientRect();
+        return {
+          top: rect.top,
+          bottom: rect.bottom,
+          right: rect.right,
+        };
+      });
+
+      var success = true;
+      var nextTop = 0;
+      var spacing = 22;
+
+      refs.forEach(function (ref) {
+        var href = ref.getAttribute('href');
+        if (!href) {
+          success = false;
+          return;
+        }
+
+        var id = href.replace('#', '');
+        var li = document.getElementById(id);
+        if (!li) {
+          success = false;
+          return;
+        }
+
+        var content = li.cloneNode(true);
+        var backref = content.querySelector('.footnote-backref');
+        if (backref) backref.remove();
+
+        var sidenote = document.createElement('aside');
+        sidenote.className = 'sidenote';
+        sidenote.innerHTML =
+          '<span class="sidenote-number">' +
+          ref.textContent +
+          '.</span> ' +
+          content.innerHTML;
+
+        rail.appendChild(sidenote);
+
+        var refTop = ref.getBoundingClientRect().top - mainRect.top - 6;
+        var top = Math.max(refTop, nextTop);
+
+        blockers.forEach(function (blocker) {
+          var overlapsRail = blocker.right > railLeft - 12;
+          var overlapsVertically =
+            top + mainRect.top < blocker.bottom && top + mainRect.top + sidenote.offsetHeight > blocker.top;
+          if (overlapsRail && overlapsVertically) {
+            top = Math.max(top, blocker.bottom - mainRect.top + spacing);
+          }
+        });
+
+        sidenote.style.top = top + 'px';
+        nextTop = top + sidenote.offsetHeight + spacing;
+      });
+
+      if (!success) {
+        clearSidenotes();
+        return;
+      }
+
+      footnotesSection.classList.add('sidenotes-active');
+
+      var requiredHeight = Math.max(main.scrollHeight, nextTop + 16);
+      if (requiredHeight > main.clientHeight) {
+        main.style.minHeight = requiredHeight + 'px';
+      }
+    }
+
+    var resizeTimer = 0;
+    function queueLayout() {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(layoutSidenotes, 50);
+    }
+
+    queueLayout();
+    window.addEventListener('load', queueLayout);
+    window.addEventListener('resize', queueLayout);
+    window.setTimeout(queueLayout, 600);
+    window.setTimeout(queueLayout, 1500);
+  });
+</script>

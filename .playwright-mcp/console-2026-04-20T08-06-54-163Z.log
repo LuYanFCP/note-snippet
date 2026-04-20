@@ -1,0 +1,18 @@
+[  205658ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://example.org/posts/note-snippet-13-%E5%A6%82%E4%BD%95%E8%AE%A9hugo%E6%94%AF%E6%8C%81infographic/:0
+[  205867ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://example.org/favicon.ico:0
+[  480136ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:1313/:0
+[  480163ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:1313/favicon.ico:0
+[  482158ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:1313/:0
+[  482168ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:1313/favicon.ico:0
+[  507187ms] [ERROR] WebSocket connection to 'ws://localhost:1313/livereload' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1313/livereload.js?mindelay=10&v=2&port=1313&path=livereload:1
+[  507209ms] [ERROR] WebSocket connection to 'ws://localhost:1313/livereload' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1313/livereload.js?mindelay=10&v=2&port=1313&path=livereload:1
+[  507250ms] [ERROR] WebSocket connection to 'ws://localhost:1313/livereload' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1313/livereload.js?mindelay=10&v=2&port=1313&path=livereload:1
+[  507332ms] [ERROR] WebSocket connection to 'ws://localhost:1313/livereload' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1313/livereload.js?mindelay=10&v=2&port=1313&path=livereload:1
+[  507493ms] [ERROR] WebSocket connection to 'ws://localhost:1313/livereload' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1313/livereload.js?mindelay=10&v=2&port=1313&path=livereload:1
+[  507815ms] [ERROR] WebSocket connection to 'ws://localhost:1313/livereload' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1313/livereload.js?mindelay=10&v=2&port=1313&path=livereload:1
+[  508457ms] [ERROR] WebSocket connection to 'ws://localhost:1313/livereload' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1313/livereload.js?mindelay=10&v=2&port=1313&path=livereload:1
+[  509739ms] [ERROR] WebSocket connection to 'ws://localhost:1313/livereload' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1313/livereload.js?mindelay=10&v=2&port=1313&path=livereload:1
+[  512301ms] [ERROR] WebSocket connection to 'ws://localhost:1313/livereload' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1313/livereload.js?mindelay=10&v=2&port=1313&path=livereload:1
+[  517422ms] [ERROR] WebSocket connection to 'ws://localhost:1313/livereload' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1313/livereload.js?mindelay=10&v=2&port=1313&path=livereload:1
+[  527665ms] [ERROR] WebSocket connection to 'ws://localhost:1313/livereload' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1313/livereload.js?mindelay=10&v=2&port=1313&path=livereload:1
+[  548149ms] [ERROR] WebSocket connection to 'ws://localhost:1313/livereload' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1313/livereload.js?mindelay=10&v=2&port=1313&path=livereload:1

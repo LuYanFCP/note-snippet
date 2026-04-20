@@ -378,7 +378,15 @@ def main():
         return
     
     # 获取GitHub配置
-    github_config = config.get('params', {}).get('github', {})
+    params_config = config.get('params', {})
+    github_sync_config = params_config.get('githubSync', {})
+    legacy_github_config = params_config.get('github', {})
+    if isinstance(github_sync_config, dict):
+        github_config = github_sync_config
+    elif isinstance(legacy_github_config, dict):
+        github_config = legacy_github_config
+    else:
+        github_config = {}
     enabled = github_config.get('enabled', False)
     username = github_config.get('username', '')
     branch = github_config.get('branch', 'main')
@@ -391,7 +399,7 @@ def main():
     
     # 检查用户名
     if not username:
-        print("未找到GitHub用户名，请在配置中设置params.github.username")
+        print("未找到GitHub用户名，请在配置中设置params.githubSync.username")
         return
     
     # 1. 获取并保存README

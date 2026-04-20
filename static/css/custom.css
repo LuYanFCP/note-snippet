@@ -1,0 +1,182 @@
+/* Blockquote base style enhancement */
+blockquote {
+  background: #f8f9fa;
+  border-left: 4px solid #6a737d;
+  padding: 0.8em 1em;
+  margin: 1em 0;
+  color: #24292f;
+}
+
+blockquote p {
+  margin: 0.4em 0;
+}
+
+blockquote blockquote {
+  margin: 0.5em 0;
+}
+
+/* Keep HTML images responsive without distorting aspect ratio. */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* GitHub-style Alerts */
+.markdown-alert {
+  padding: 0.8em 1em;
+  margin: 1em 0;
+  border-left: 4px solid;
+  border-radius: 4px;
+}
+
+.markdown-alert > :first-child {
+  margin-top: 0;
+}
+
+.markdown-alert > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-weight: 600;
+  margin-bottom: 0.4em;
+}
+
+.markdown-alert-title svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+/* [!NOTE] */
+.markdown-alert-note {
+  border-left-color: #0969da;
+  background: #ddf4ff;
+}
+
+.markdown-alert-note .markdown-alert-title {
+  color: #0969da;
+}
+
+/* [!TIP] */
+.markdown-alert-tip {
+  border-left-color: #1a7f37;
+  background: #dafbe1;
+}
+
+.markdown-alert-tip .markdown-alert-title {
+  color: #1a7f37;
+}
+
+/* [!IMPORTANT] */
+.markdown-alert-important {
+  border-left-color: #8250df;
+  background: #fbefff;
+}
+
+.markdown-alert-important .markdown-alert-title {
+  color: #8250df;
+}
+
+/* [!WARNING] */
+.markdown-alert-warning {
+  border-left-color: #9a6700;
+  background: #fff8c5;
+}
+
+.markdown-alert-warning .markdown-alert-title {
+  color: #9a6700;
+}
+
+/* [!CAUTION] */
+.markdown-alert-caution {
+  border-left-color: #cf222e;
+  background: #ffebe9;
+}
+
+.markdown-alert-caution .markdown-alert-title {
+  color: #cf222e;
+}
+
+/* ===== Sidenotes (Tufte-style) ===== */
+
+/* Widen the body to make room for sidenotes on large screens */
+@media (min-width: 1200px) {
+  body {
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: calc((100vw - 800px) / 2);
+    position: relative;
+  }
+}
+
+/* Footnote ref superscript */
+.footnote-ref {
+  font-size: 0.75em;
+  vertical-align: super;
+  text-decoration: none;
+  color: #c7254e;
+}
+
+/* Sidenote element placed next to the ref */
+.sidenote {
+  position: absolute;
+  right: -280px;
+  width: 250px;
+  font-size: 0.82em;
+  line-height: 1.4;
+  color: #555;
+  border-left: 2px solid #ddd;
+  padding-left: 0.8em;
+}
+
+.sidenote .sidenote-number {
+  font-weight: 700;
+  color: #c7254e;
+  margin-right: 0.3em;
+}
+
+.sidenote a {
+  color: #0969da;
+  word-break: break-all;
+}
+
+/* Hide the original bottom footnotes section when sidenotes are active */
+.footnotes.sidenotes-active {
+  display: none;
+}
+
+/* ---- Fallback: narrow screens show bottom footnotes ---- */
+@media (max-width: 1199px) {
+  .sidenote {
+    display: none !important;
+  }
+
+  .footnotes.sidenotes-active {
+    display: block;
+  }
+
+  .footnotes {
+    margin-top: 2em;
+    padding-top: 1em;
+    border-top: 1px solid #ddd;
+    font-size: 0.9em;
+    color: #555;
+  }
+
+  .footnotes ol {
+    padding-left: 1.5em;
+  }
+
+  .footnotes li {
+    margin-bottom: 0.5em;
+  }
+
+  .footnote-backref {
+    text-decoration: none;
+    margin-left: 0.3em;
+  }
+}

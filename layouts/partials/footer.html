@@ -29,6 +29,59 @@
 {{- end -}}
 
 <script>
+  // Normalize "bare" fenced code blocks (no language tag) into the same
+  // structure Hugo + Chroma produce for tagged blocks, so our line-number
+  // and wrap CSS applies uniformly. Without this, ``` blocks bypass Chroma
+  // and render as plain <pre tabindex="0"> with no line numbers.
+  document.addEventListener('DOMContentLoaded', function () {
+    var bare = document.querySelectorAll('article pre[tabindex="0"]:not(.mermaid)');
+    bare.forEach(function (pre) {
+      if (pre.closest('.highlight')) return; // already a Chroma-rendered block
+      var code = pre.querySelector('code');
+      if (!code) return;
+
+      var raw = code.textContent.replace(/\n$/, '');
+      var lines = raw.split('\n');
+
+      var wrapper = document.createElement('div');
+      wrapper.className = 'highlight';
+      pre.parentNode.insertBefore(wrapper, pre);
+      wrapper.appendChild(pre);
+
+      pre.setAttribute(
+        'style',
+        'color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;'
+      );
+      code.className = 'language-text';
+      code.setAttribute('data-lang', 'text');
+      code.textContent = '';
+
+      lines.forEach(function (line, i) {
+        var row = document.createElement('span');
+        row.setAttribute('style', 'display:flex;');
+
+        var num = document.createElement('span');
+        num.setAttribute(
+          'style',
+          'white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f'
+        );
+        num.textContent = String(i + 1);
+
+        var content = document.createElement('span');
+        // Match Chroma's structure: keep the trailing newline inside the
+        // line-content span so flex rows don't pick up an extra line-break
+        // gap from a text node living at <code> level.
+        content.textContent = line + (i < lines.length - 1 ? '\n' : '');
+
+        row.appendChild(num);
+        row.appendChild(content);
+        code.appendChild(row);
+      });
+    });
+  });
+</script>
+
+<script>
   document.addEventListener('DOMContentLoaded', function () {
     var main = document.querySelector('main');
     var footnotesSection = document.querySelector('.footnotes');

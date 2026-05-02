@@ -282,7 +282,10 @@ article .highlight pre code > span {
   align-items: flex-start;
 }
 
-/* The line-number cell (first inner span) — fixed-width, non-selectable gutter */
+/* The line-number cell (first inner span) — fixed-width, non-selectable gutter.
+   Chroma writes an inline `color:#7f7f7f` from the Monokai palette which is
+   nearly invisible on Monokai's own #272822 background; force a higher
+   contrast color and skip the extra opacity fade. */
 article .highlight pre code > span > span:first-child {
   flex: 0 0 auto;
   min-width: 2.25em;
@@ -290,8 +293,9 @@ article .highlight pre code > span > span:first-child {
   padding-right: 0.55em;
   text-align: right;
   user-select: none;
-  opacity: 0.55;
-  border-right: 1px solid rgba(127, 127, 127, 0.25);
+  opacity: 1;
+  color: rgba(248, 248, 242, 0.45) !important;
+  border-right: 1px solid rgba(248, 248, 242, 0.18);
   white-space: pre;
 }
 
@@ -304,10 +308,6 @@ article .highlight pre code > span > span:last-child {
   overflow-wrap: anywhere;
 }
 
-/* Slightly stronger gutter divider in dark mode */
-.dark article .highlight pre code > span > span:first-child {
-  border-right-color: rgba(255, 255, 255, 0.18);
-}
 
 /* ---------------------------------------------------------------------- */
 /* Mermaid: it's a render container, not a code block. Strip the prose

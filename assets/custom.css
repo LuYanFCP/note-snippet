@@ -251,3 +251,92 @@
     text-decoration: none;
   }
 }
+
+/* ---------------------------------------------------------------------- */
+/* Code blocks: line numbers + soft wrap (Chroma + lineNumbersInTable=false) */
+/* ---------------------------------------------------------------------- */
+
+/* Enable wrapping inside <pre>; override the prose default `overflow-x: auto` */
+article .highlight pre {
+  overflow-x: visible !important;
+  white-space: pre-wrap !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  tab-size: 4;
+  -moz-tab-size: 4;
+}
+
+/* The theme sets `article code { display: inline-block }` globally (for inline
+   code styling). Inside <pre>, that prevents <code> from filling the pre's
+   width and breaks `white-space: pre-wrap`. Force block so wrap works. */
+article .highlight pre > code {
+  display: block !important;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Each source line is wrapped in a <span style="display:flex"> by Chroma.
+   Align to top so wrapped code stays next to its line-number gutter. */
+article .highlight pre code > span {
+  display: flex !important;
+  align-items: flex-start;
+}
+
+/* The line-number cell (first inner span) — fixed-width, non-selectable gutter */
+article .highlight pre code > span > span:first-child {
+  flex: 0 0 auto;
+  min-width: 2.25em;
+  margin-right: 0.75em;
+  padding-right: 0.55em;
+  text-align: right;
+  user-select: none;
+  opacity: 0.55;
+  border-right: 1px solid rgba(127, 127, 127, 0.25);
+  white-space: pre;
+}
+
+/* The code cell (last inner span) — must shrink and wrap inside the flex row */
+article .highlight pre code > span > span:last-child {
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Slightly stronger gutter divider in dark mode */
+.dark article .highlight pre code > span > span:first-child {
+  border-right-color: rgba(255, 255, 255, 0.18);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Mermaid: it's a render container, not a code block. Strip the prose
+   "dark code background" so the page background can show through and the
+   themeVariables in mermaid.html control the look. */
+/* ---------------------------------------------------------------------- */
+article pre.mermaid {
+  background: transparent !important;
+  color: inherit !important;
+  padding: 0 !important;
+  margin-top: 1.75em !important;
+  margin-bottom: 1.75em !important;
+  white-space: normal;
+  border-radius: 0;
+  overflow: visible;
+}
+
+article pre.mermaid > svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Hide raw mermaid source flash before mermaid.run() finishes processing */
+article pre.mermaid:not([data-processed="true"]) {
+  visibility: hidden;
+}
+
+article pre.mermaid[data-processed="true"] {
+  visibility: visible;
+}

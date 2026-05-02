@@ -2,9 +2,88 @@
 {{- .Store.Set "mermaidLoaded" true -}}
 <script type="module">
   import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs';
-  mermaid.initialize({
-    startOnLoad: true,
-    theme: 'default',
+
+  // Theme palettes — uniform warm-paper aesthetic that aligns with the
+  // page's "linen" background. Light = sand on parchment; dark = inked
+  // sand on smoked oak. Nodes intentionally a shade darker than the page
+  // so the boundary reads cleanly.
+  const FONT = 'ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif';
+
+  const lightTheme = {
+    background: 'transparent',
+    fontFamily: FONT,
+    primaryColor: '#efe1bf',          // node fill — clearly darker than linen
+    primaryTextColor: '#2a1f10',
+    primaryBorderColor: '#8a6f44',
+    secondaryColor: '#e7d4a8',
+    tertiaryColor: '#f7ecd1',
+    lineColor: '#6e5a36',
+    textColor: '#2a1f10',
+    mainBkg: '#efe1bf',
+    secondBkg: '#e7d4a8',
+    tertiaryBkg: '#f7ecd1',
+    edgeLabelBackground: '#f3e7c8',
+    noteBkgColor: '#fff0a8',          // sticky-note yellow, more saturated
+    noteTextColor: '#3a2a0a',
+    noteBorderColor: '#c79a3a',
+    clusterBkg: '#f1e6cb',
+    clusterBorder: '#8a6f44',
+    titleColor: '#2a1f10',
+    nodeTextColor: '#2a1f10',
+  };
+
+  const darkTheme = {
+    background: 'transparent',
+    fontFamily: FONT,
+    primaryColor: '#3a3120',          // node fill — warm dark wood
+    primaryTextColor: '#f3e8cf',
+    primaryBorderColor: '#b8966a',
+    secondaryColor: '#2c2516',
+    tertiaryColor: '#221c10',
+    lineColor: '#c8b48a',
+    textColor: '#f3e8cf',
+    mainBkg: '#3a3120',
+    secondBkg: '#2c2516',
+    tertiaryBkg: '#221c10',
+    edgeLabelBackground: '#2c2516',
+    noteBkgColor: '#4a3d1a',          // dark amber sticky
+    noteTextColor: '#f9e9b6',
+    noteBorderColor: '#b08c4a',
+    clusterBkg: '#2c2516',
+    clusterBorder: '#b8966a',
+    titleColor: '#f3e8cf',
+    nodeTextColor: '#f3e8cf',
+  };
+
+  // Cache original mermaid source so we can re-render on theme toggle
+  document.querySelectorAll('pre.mermaid').forEach((el) => {
+    if (!el.dataset.src) el.dataset.src = el.textContent;
   });
+
+  const renderAll = async () => {
+    const isDark = document.documentElement.classList.contains('dark');
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'loose',
+      theme: 'base',
+      themeVariables: isDark ? darkTheme : lightTheme,
+    });
+    document.querySelectorAll('pre.mermaid').forEach((el) => {
+      el.removeAttribute('data-processed');
+      if (el.dataset.src) el.textContent = el.dataset.src;
+    });
+    try {
+      await mermaid.run({ querySelector: 'pre.mermaid' });
+    } catch (e) {
+      console.warn('mermaid render error:', e);
+    }
+  };
+
+  renderAll();
+
+  // Re-render when the dark-mode class on <html> flips
+  new MutationObserver((muts) => {
+    if (muts.some((m) => m.attributeName === 'class')) renderAll();
+  }).observe(document.documentElement, { attributes: true });
 </script>
 {{- end -}}

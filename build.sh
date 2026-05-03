@@ -1,20 +1,19 @@
-#!/usr/bin/env bash
-# Build the static site:
-# 1. Sync content from GitHub Issues (writes into content/posts/, gitignored)
-# 2. Run Hugo to produce ./public
+#!/bin/sh
+# POSIX sh on purpose — Cloudflare Pages invokes this with `sh ./build.sh`,
+# the bash shebang is ignored, so no `pipefail`, no `[[ ... ]]`.
 
-set -euo pipefail
+set -eu
 
-# Install uv only if it's missing (CI images often pre-install it via setup-uv)
+# Install uv only if missing (most CI images already have it pre-installed)
 if ! command -v uv >/dev/null 2>&1; then
   curl -LsSf https://astral.sh/uv/install.sh | sh
-  # The installer drops the binary into ~/.local/bin; make sure it's on PATH
-  export PATH="${HOME}/.local/bin:${PATH}"
+  PATH="${HOME}/.local/bin:${PATH}"
+  export PATH
 fi
 
-# Pass GITHUB_TOKEN to the fetcher when present (CI auto-injects it).
+# Forward GITHUB_TOKEN to the fetcher when present (CI auto-injects it).
 # Locally you can `export GITHUB_TOKEN=...` or skip it for public repos.
-if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+if [ -n "${GITHUB_TOKEN:-}" ]; then
   uv run fetch_github_content.py --token "${GITHUB_TOKEN}"
 else
   uv run fetch_github_content.py

@@ -3,3 +3,8 @@ content/about.md
 content/about/
 public
 .DS_Store
+
+# Local screenshots & playwright run artifacts (not part of the source)
+.playwright-mcp/
+code-*.png
+mermaid-*.png

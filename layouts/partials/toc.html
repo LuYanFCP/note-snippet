@@ -1,0 +1,26 @@
+{{- /*
+  Inline Table of Contents.
+
+  Renders only when:
+  - Frontmatter does not opt out (`toc: false`)
+  - The page actually has TOC items (Hugo emits an empty <nav>...</nav>
+    when there are no headings of the configured levels, so we check on the
+    raw string length)
+*/ -}}
+{{- $toc := .TableOfContents -}}
+{{- $tocLen := len (string $toc) -}}
+{{- if and (ne .Params.toc false) (gt $tocLen 50) -}}
+<aside class="post-toc not-prose" aria-label="Table of contents">
+  <details class="post-toc-details" open>
+    <summary class="post-toc-summary">
+      <span class="post-toc-title">{{ i18n "toc" | default "目录" }}</span>
+      <span class="post-toc-chevron" aria-hidden="true">›</span>
+    </summary>
+    <div class="post-toc-body">
+      {{- /* Hugo's `.TableOfContents` already wraps content in
+             <nav id="TableOfContents">, so don't double-nest */ -}}
+      {{- $toc | safeHTML -}}
+    </div>
+  </details>
+</aside>
+{{- end -}}

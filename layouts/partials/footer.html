@@ -29,6 +29,76 @@
 {{- end -}}
 
 <script>
+  // Highlight the TOC entry that matches the heading currently nearest the
+  // top of the viewport. No-op when there's no .post-toc on the page.
+  document.addEventListener('DOMContentLoaded', function () {
+    var toc = document.querySelector('.post-toc');
+    if (!toc) return;
+
+    var links = Array.from(toc.querySelectorAll('a[href^="#"]'));
+    if (!links.length) return;
+
+    // Build an id -> link map so we can flip `.is-active` cheaply
+    var byId = Object.create(null);
+    var headings = [];
+    links.forEach(function (a) {
+      var id = decodeURIComponent(a.getAttribute('href').slice(1));
+      var h = id && document.getElementById(id);
+      if (!h) return;
+      byId[id] = a;
+      headings.push(h);
+    });
+
+    if (!headings.length || !('IntersectionObserver' in window)) return;
+
+    var visible = new Set();
+
+    function refresh() {
+      // Pick the heading whose id is currently visible AND highest on screen
+      var best = null;
+      var bestTop = Infinity;
+      headings.forEach(function (h) {
+        if (!visible.has(h.id)) return;
+        var t = h.getBoundingClientRect().top;
+        if (t < bestTop) {
+          bestTop = t;
+          best = h;
+        }
+      });
+      // Fallback: if nothing is "intersecting" right now (e.g. between two
+      // sections), keep the last heading whose top is above viewport top
+      if (!best) {
+        for (var i = headings.length - 1; i >= 0; i--) {
+          if (headings[i].getBoundingClientRect().top < 80) {
+            best = headings[i];
+            break;
+          }
+        }
+      }
+      links.forEach(function (a) { a.classList.remove('is-active'); });
+      if (best && byId[best.id]) byId[best.id].classList.add('is-active');
+    }
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) visible.add(e.target.id);
+        else visible.delete(e.target.id);
+      });
+      refresh();
+    }, {
+      // Treat "in view" as the band between 80px from the top and 60% down:
+      // this keeps the active item stable while reading the body of a section.
+      rootMargin: '-80px 0px -55% 0px',
+      threshold: 0,
+    });
+
+    headings.forEach(function (h) { io.observe(h); });
+    // Initial pass for landing position
+    window.addEventListener('load', refresh);
+  });
+</script>
+
+<script>
   // Normalize "bare" fenced code blocks (no language tag) into the same
   // structure Hugo + Chroma produce for tagged blocks, so our line-number
   // and wrap CSS applies uniformly. Without this, ``` blocks bypass Chroma

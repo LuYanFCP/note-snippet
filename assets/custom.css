@@ -310,6 +310,202 @@ article .highlight pre code > span > span:last-child {
 
 
 /* ---------------------------------------------------------------------- */
+/* Inline Table of Contents — book-frontispiece feel:
+   solid card with a soft border, a labelled "目录" header rule,
+   clear two-tier indentation, tactile hover.
+
+   NOTE on selectors: Tailwind v4's universal reset
+     `*:not(#\#):not(#\#) { margin:0; padding:0; border:0 solid }`
+   has specificity (2,0,0) and zeros out our box model. We use the same
+   `:not(#\#):not(#\#)` trick on every TOC selector so each rule wins on
+   specificity. Source order then handles ties (custom.css ships after
+   the theme's main.css). */
+/* ---------------------------------------------------------------------- */
+.post-toc:not(#\#):not(#\#) {
+  --toc-fg: #2b2418;
+  --toc-fg-muted: rgba(43, 36, 24, 0.62);
+  --toc-accent: #8a6f44;
+  --toc-rule: rgba(160, 133, 96, 0.28);
+  --toc-bg: rgba(243, 227, 193, 0.32);
+  --toc-bg-hover: rgba(160, 133, 96, 0.14);
+  --toc-bg-active: rgba(199, 154, 58, 0.22);
+
+  margin: 0 0 2.75em;
+  padding: 1em 1.5em 1.1em;
+  background: var(--toc-bg);
+  border: 1px solid var(--toc-rule);
+  border-radius: 10px;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--toc-fg);
+}
+
+.dark .post-toc:not(#\#):not(#\#) {
+  --toc-fg: #f3e8cf;
+  --toc-fg-muted: rgba(243, 232, 207, 0.6);
+  --toc-accent: #b8966a;
+  --toc-rule: rgba(184, 150, 106, 0.3);
+  --toc-bg: rgba(58, 49, 32, 0.4);
+  --toc-bg-hover: rgba(184, 150, 106, 0.16);
+  --toc-bg-active: rgba(176, 140, 74, 0.28);
+}
+
+.post-toc-details:not(#\#):not(#\#) {
+  margin: 0;
+  padding: 0;
+}
+
+/* Header — "目录" label and chevron in a row, with a divider underneath */
+.post-toc-summary:not(#\#):not(#\#) {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.85em;
+  color: var(--toc-fg);
+  user-select: none;
+  margin: 0 -0.3em 0.95em;
+  padding-bottom: 0.7em;
+  border-bottom: 1px solid var(--toc-rule);
+}
+
+.post-toc-summary::-webkit-details-marker {
+  display: none;
+}
+
+.post-toc-title:not(#\#):not(#\#) {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--toc-accent);
+}
+
+/* Subtle subtitle hint after the main label */
+.post-toc-title:not(#\#):not(#\#)::after {
+  content: " / contents";
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  color: var(--toc-fg-muted);
+  margin-left: 0.45em;
+  text-transform: uppercase;
+}
+
+.post-toc-chevron:not(#\#):not(#\#) {
+  margin-left: auto;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--toc-fg-muted);
+  transform: rotate(90deg);
+  transition: transform 0.2s ease;
+}
+
+.post-toc-details:not([open]):not(#\#):not(#\#) .post-toc-chevron {
+  transform: rotate(0deg);
+}
+
+.post-toc-details:not([open]):not(#\#):not(#\#) .post-toc-summary {
+  border-bottom-color: transparent;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.post-toc-body:not(#\#):not(#\#) {
+  margin: 0;
+}
+
+/* Hugo's <nav id="TableOfContents"> wraps the whole tree */
+.post-toc-body:not(#\#):not(#\#) > nav {
+  margin: 0;
+}
+
+.post-toc-body:not(#\#):not(#\#) ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+
+/* Top-level entries (H2): bold, with an accent dot anchoring the row */
+.post-toc-body:not(#\#):not(#\#) > nav > ul > li {
+  position: relative;
+  margin: 0.5em 0;
+  padding-left: 1.25em;
+}
+
+/* Solid dot at the left of every H2 — the "anchor" of its sub-tree */
+.post-toc-body:not(#\#):not(#\#) > nav > ul > li::before {
+  content: "";
+  position: absolute;
+  left: 0.15em;
+  top: 0.78em;
+  width: 0.42em;
+  height: 0.42em;
+  border-radius: 50%;
+  background: var(--toc-accent);
+}
+
+.post-toc-body:not(#\#):not(#\#) > nav > ul > li > a {
+  font-weight: 600;
+  color: var(--toc-fg);
+}
+
+/* H3 sub-tree: pushed right, attached to a vertical guide line that lines up
+   with the parent dot. Each child gets a short horizontal tick that hangs
+   off the guide — gives the whole TOC a real "outline" silhouette. */
+.post-toc-body:not(#\#):not(#\#) > nav > ul > li > ul {
+  margin: 0.35em 0 0.1em 0.36em;
+  padding-left: 1.55em;
+  border-left: 1px solid var(--toc-rule);
+}
+
+.post-toc-body:not(#\#):not(#\#) > nav > ul > li > ul > li {
+  position: relative;
+  margin: 0.18em 0;
+}
+
+/* Horizontal tick connecting the vertical guide to the H3 link */
+.post-toc-body:not(#\#):not(#\#) > nav > ul > li > ul > li::before {
+  content: "";
+  position: absolute;
+  left: -1.55em;
+  top: 0.68em;
+  width: 1.1em;
+  height: 1px;
+  background: var(--toc-rule);
+}
+
+.post-toc-body:not(#\#):not(#\#) > nav > ul > li > ul > li > a {
+  font-size: 0.86rem;
+  font-weight: 400;
+  color: var(--toc-fg-muted);
+}
+
+/* Shared link layout — everything below works for both H2 and H3 entries */
+.post-toc-body:not(#\#):not(#\#) a {
+  display: inline-block;
+  padding: 0.18em 0.4em;
+  margin-left: -0.4em;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: background-color 0.15s ease, color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.post-toc-body:not(#\#):not(#\#) a:hover {
+  background: var(--toc-bg-hover);
+  color: var(--toc-fg) !important;
+  transform: translateX(2px);
+}
+
+/* Active section highlight (driven by the IntersectionObserver in footer.html) */
+.post-toc-body:not(#\#):not(#\#) a.is-active {
+  background: var(--toc-bg-active);
+  color: var(--toc-fg) !important;
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--toc-accent);
+}
+
+/* ---------------------------------------------------------------------- */
 /* Mermaid: it's a render container, not a code block. Strip the prose
    "dark code background" so the page background can show through and the
    themeVariables in mermaid.html control the look. */

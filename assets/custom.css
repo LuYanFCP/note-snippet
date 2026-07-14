@@ -114,6 +114,12 @@
   color: #ff938a;
 }
 
+/* Article body typography */
+article > section {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
 /* Sidenotes */
 @media (min-width: 900px) {
   :root {

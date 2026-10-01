@@ -1,117 +1,165 @@
-/* Goldmark alerts */
-.markdown-alert {
-  margin: 1.5em 0;
-  padding: 1em 1.125em;
-  border-left: 4px solid;
-  border-radius: 0.75rem;
+/* ----------------------------------------------------------------------
+   Goldmark alerts — a solid title bar over a warm paper fill.
+
+       [ INSIGHT  7 | DPX 的适用边界 ]     <- .markdown-alert-title
+       [ body …                        ]   <- .markdown-alert-body
+
+   The "7" is a pure CSS counter so boxes renumber themselves when they
+   are moved; nothing is written in the Markdown. The render hook lives in
+   layouts/_default/_markup/render-blockquote.html.
+
+   NOTE on selectors — two separate specificity fights here, both won with
+   the `:not(#\#)` trick (`#\#` is an *id* selector, so each repetition is
+   worth (1,0,0)):
+
+     1. Tailwind v4's universal reset `*:not(#\#):not(#\#)` is (2,0,0) and
+        zeros margin/padding/border.
+     2. Tailwind Typography is worse: `.prose:not(#\#):not(#\#):not(#\#)
+        :not(#\#) :where(p)` is (4,1,0) and puts 1.25em margins on every
+        paragraph — including our title bar, which pushes it off the top
+        of the box.
+
+   So every rule that touches the box model below repeats `:not(#\#)` five
+   times, matching what the theme itself uses, which clears both. Source
+   order settles ties (custom.css ships after the theme's main.css).
+
+   NOTE on ordering: the per-type palette must come *after* the
+   `.markdown-alert` fallback — same specificity, so the later rule wins —
+   and the dark palette after `.dark .markdown-alert` for the same reason.
+   ---------------------------------------------------------------------- */
+
+/* Numbering is a flat per-post counter: the 4th box in the article is "4",
+   whatever section it sits in.
+
+   An earlier version numbered them section.box ("4.3"), which read better
+   in isolation but collided with the hand-written section numbers these
+   posts use — a box showing "4.3" could sit inside "### 4.5", while the
+   article separately has a "### 4.3". It also produced "0.1" for any box
+   placed before the first H2, which the preamble boxes are. */
+article > section {
+  counter-reset: alert-num;
 }
 
-.markdown-alert > :first-child {
+.markdown-alert {
+  counter-increment: alert-num;
+
+  /* Fallback for unknown alert types — they render in neutral brown
+     rather than colourless. Must precede the palette (see note above). */
+  --alert-c: #8a6f44;
+
+  /* Opaque on light. The fill is locked to the paper's own hue (47°) and
+     only 2.6% darker, so the box reads as the same sheet of paper rather
+     than a patch stuck on top of it. */
+  --alert-fill: #f6f3e7;
+  --alert-rule: rgba(160, 133, 96, 0.34);
+  --alert-on-c: #faf8f1;
+}
+
+/* Dark mode is a fixed rgba(0,0,0,.85) overlay the theme paints over the
+   linen in body::before, i.e. an effective background of ~#262524 — warm,
+   not pure black. So the dark fill is a translucent warm tint that lifts
+   whatever is behind it, rather than a hard-coded colour that could end
+   up darker than the page and read as a hole. */
+.dark .markdown-alert {
+  --alert-c: #b8966a;
+  --alert-fill: rgba(243, 232, 207, 0.055);
+  --alert-rule: rgba(184, 150, 106, 0.26);
+  --alert-on-c: #14120e;
+}
+
+/* Fixed palette — the alert type picks the colour and an article cannot
+   override it, which is what keeps a long post from turning into a paint
+   chart. All six are desaturated earth tones chosen to sit on the linen
+   background (#faf8f1, hue 47°) without going cold: mixing a saturated
+   accent into the paper flips R/G and reads as a grey patch. */
+.markdown-alert-insight   { --alert-c: #5f7042; }  /* 苔橄榄 */
+.markdown-alert-note      { --alert-c: #45607a; }  /* 墨蓝   */
+.markdown-alert-tip       { --alert-c: #6b7f3a; }  /* 橄榄   */
+.markdown-alert-important { --alert-c: #6b4257; }  /* 紫檀   */
+.markdown-alert-warning   { --alert-c: #a8761f; }  /* 琥珀   */
+.markdown-alert-caution   { --alert-c: #a8452f; }  /* 赭石   */
+
+.dark .markdown-alert-insight   { --alert-c: #9ab07a; }
+.dark .markdown-alert-note      { --alert-c: #8fb0cd; }
+.dark .markdown-alert-tip       { --alert-c: #b3c47e; }
+.dark .markdown-alert-important { --alert-c: #c89bb0; }
+.dark .markdown-alert-warning   { --alert-c: #dbb163; }
+.dark .markdown-alert-caution   { --alert-c: #e09581; }
+
+.markdown-alert:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  margin: 1.8em 0;
+  padding: 0;
+  border: 1px solid var(--alert-rule);
+  border-radius: 4px;      /* print corners — 10px reads as a UI card */
+  overflow: hidden;        /* clips the title bar to the rounded corners */
+  background: var(--alert-fill);
+}
+
+.markdown-alert-title:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55em;
+  margin: 0;
+  padding: 0.52em 1.1em;
+  background: var(--alert-c);
+  color: var(--alert-on-c);
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.markdown-alert-kind:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.markdown-alert-num:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", monospace;
+  font-size: 0.74rem;
+  font-weight: 400;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.markdown-alert-num::before {
+  content: counter(alert-num);
+}
+
+.markdown-alert-sep:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  opacity: 0.4;
+}
+
+.markdown-alert-body:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  padding: 0.9em 1.15em 1em;
+}
+
+.markdown-alert-body:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) p {
+  margin: 0.6em 0;
+}
+
+.markdown-alert-body:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) ol,
+.markdown-alert-body:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) ul {
+  margin: 0.5em 0;
+  padding-left: 1.4em;
+}
+
+.markdown-alert-body:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) li {
+  margin: 0.3em 0;
+}
+
+.markdown-alert-body:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#)
+  > :first-child {
   margin-top: 0;
 }
 
-.markdown-alert > :last-child {
+.markdown-alert-body:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#)
+  > :last-child {
   margin-bottom: 0;
-}
-
-.markdown-alert-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5em;
-  margin-bottom: 0.5em;
-  font-weight: 600;
-}
-
-.markdown-alert-title svg {
-  width: 1rem;
-  height: 1rem;
-  flex: none;
-  fill: currentColor;
-}
-
-.markdown-alert-note {
-  border-left-color: #0969da;
-  background: #ddf4ff;
-}
-
-.markdown-alert-note .markdown-alert-title {
-  color: #0969da;
-}
-
-.markdown-alert-tip {
-  border-left-color: #1a7f37;
-  background: #dafbe1;
-}
-
-.markdown-alert-tip .markdown-alert-title {
-  color: #1a7f37;
-}
-
-.markdown-alert-important {
-  border-left-color: #8250df;
-  background: #fbefff;
-}
-
-.markdown-alert-important .markdown-alert-title {
-  color: #8250df;
-}
-
-.markdown-alert-warning {
-  border-left-color: #9a6700;
-  background: #fff8c5;
-}
-
-.markdown-alert-warning .markdown-alert-title {
-  color: #9a6700;
-}
-
-.markdown-alert-caution {
-  border-left-color: #cf222e;
-  background: #ffebe9;
-}
-
-.markdown-alert-caution .markdown-alert-title {
-  color: #cf222e;
-}
-
-.dark .markdown-alert-note {
-  background: rgba(9, 105, 218, 0.16);
-}
-
-.dark .markdown-alert-note .markdown-alert-title {
-  color: #84bfff;
-}
-
-.dark .markdown-alert-tip {
-  background: rgba(26, 127, 55, 0.18);
-}
-
-.dark .markdown-alert-tip .markdown-alert-title {
-  color: #7ee787;
-}
-
-.dark .markdown-alert-important {
-  background: rgba(130, 80, 223, 0.18);
-}
-
-.dark .markdown-alert-important .markdown-alert-title {
-  color: #c297ff;
-}
-
-.dark .markdown-alert-warning {
-  background: rgba(154, 103, 0, 0.2);
-}
-
-.dark .markdown-alert-warning .markdown-alert-title {
-  color: #e3b341;
-}
-
-.dark .markdown-alert-caution {
-  background: rgba(207, 34, 46, 0.16);
-}
-
-.dark .markdown-alert-caution .markdown-alert-title {
-  color: #ff938a;
 }
 
 /* Article body typography */

@@ -87,4 +87,12 @@
 
   <link rel="canonical" href="{{- .Permalink -}}" />
   {{- end -}}
+
+  {{- /* hreflang：告诉搜索引擎中英两版是同一篇，别判重复内容 */ -}}
+  {{- if .IsTranslated -}}
+  {{- range .AllTranslations -}}
+  <link rel="alternate" hreflang="{{- .Lang -}}" href="{{- .Permalink -}}" />
+  {{- end -}}
+  <link rel="alternate" hreflang="x-default" href="{{- (index (where .AllTranslations "Lang" "zh-cn") 0).Permalink -}}" />
+  {{- end -}}
 </head>

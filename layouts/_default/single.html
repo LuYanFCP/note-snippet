@@ -26,6 +26,17 @@
     {{- end -}}
   </header>
 
+  {{- /* 机翻声明。机器翻译必须标注出来，读者有权知道自己在读什么。
+         只有 .en.md 的 frontmatter 带 machine_translated 才会渲染 */ -}}
+  {{- if .Params.machine_translated -}}
+  <aside class="mt-notice not-prose">
+    <span>{{- i18n "machine_translated_notice" -}}</span>
+    {{- range .Translations -}}{{- if eq .Lang "zh-cn" -}}
+    <a href="{{- .RelPermalink -}}">{{- i18n "read_original" -}}</a>
+    {{- end -}}{{- end -}}
+  </aside>
+  {{- end -}}
+
   {{- /* TOC: rendered only on real article pages (skip the Type=page like /about) */ -}}
   {{- if ne .Type "page" -}}
   {{- partial "toc.html" . -}}

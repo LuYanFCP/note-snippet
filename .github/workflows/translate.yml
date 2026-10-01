@@ -1,0 +1,120 @@
+# issue 一改，CI 就把它翻成英文，译文提交回 translations/。
+#
+# 为什么是这个形态：站点是纯静态的，运行时没有后端可以安全地放 API key。
+# 把 LLM 调用放进 CI，key 就只活在 GitHub Secrets 里 —— 既不进浏览器，
+# 也不进 Cloudflare 的构建环境。构建时只读仓库里已经躺好的译文。
+#
+# 顺带解决一件事：以前改 issue 网站不会自动重建，现在这个提交会触发 CF Pages。
+
+name: Translate issues to English
+
+on:
+  issues:
+    types: [opened, edited, labeled, unlabeled]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: "issue 编号；留空则全量回填"
+        required: false
+        type: string
+      force:
+        description: "忽略缓存，整篇重翻"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# 连着编辑好几次时只跑最后一次，别为中间状态花钱
+concurrency:
+  group: translate-${{ github.event.issue.number || inputs.issue || 'all' }}
+  cancel-in-progress: true
+
+jobs:
+  translate:
+    # 只翻仓库主人自己发的、带 Release 标签的 issue。
+    # author_association 比对比用户名可靠，不用操心大小写。
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.author_association == 'OWNER' &&
+       contains(toJSON(github.event.issue.labels.*.name), 'Release'))
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 先确认 key 拿得到再干别的。踩过一次：secret 建在 Environment 里，
+      # job 没声明 environment:，${{ secrets.X }} 就是空字符串，
+      # 一路跑到调 API 才报一个看不懂的 401。
+      - name: 检查 DEEPSEEK_API_KEY
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          if [ -z "${DEEPSEEK_API_KEY:-}" ]; then
+            echo "::error::拿不到 DEEPSEEK_API_KEY"
+            echo "它必须是 Repository secret："
+            echo "  Settings → Secrets and variables → Actions → Repository secrets"
+            echo "建在 Environment 下的 secret，job 不声明 environment: 是读不到的。"
+            exit 1
+          fi
+          echo "DEEPSEEK_API_KEY 已就绪（长度 ${#DEEPSEEK_API_KEY}）"
+
+      - uses: astral-sh/setup-uv@v5
+
+      # 先验掩码规则没破 —— 这步不花钱，但能挡住「公式被译坏」这类事故
+      - name: 掩码往返测试
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: uv run test_roundtrip.py
+
+      - name: 翻译
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 走环境变量而不是直接插值到脚本里，避免表达式注入
+          INPUT_ISSUE: ${{ inputs.issue }}
+          EVENT_ISSUE: ${{ github.event.issue.number }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -eu
+          FLAGS=""
+          [ "${FORCE:-false}" = "true" ] && FLAGS="--force"
+
+          if [ -n "${INPUT_ISSUE:-}" ]; then
+            uv run translate_issue.py --issue "$INPUT_ISSUE" $FLAGS
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            uv run translate_issue.py --all $FLAGS
+          else
+            uv run translate_issue.py --issue "$EVENT_ISSUE" $FLAGS
+          fi
+
+      - name: 提交译文
+        id: commit
+        run: |
+          set -eu
+          if [ -z "$(git status --porcelain translations)" ]; then
+            echo "译文无变化，不提交"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add translations
+          git commit -m "docs(i18n): 更新英文译文"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # 译文没变但中文原文改了的情况：上一步不会推送，这里补一次重建。
+      # 没配 CF_DEPLOY_HOOK 就安静跳过。
+      - name: 触发 Cloudflare Pages 重建
+        if: steps.commit.outputs.changed == 'false'
+        env:
+          HOOK: ${{ secrets.CF_DEPLOY_HOOK }}
+        run: |
+          set -eu
+          if [ -z "${HOOK:-}" ]; then
+            echo "未配置 CF_DEPLOY_HOOK，跳过"
+            exit 0
+          fi
+          curl -fsS -X POST "$HOOK" > /dev/null
+          echo "已触发重建"

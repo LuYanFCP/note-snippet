@@ -1,7 +1,22 @@
 baseURL = 'https://blog.0xnullpath.cc/'
-languageCode = 'zh-cn'
 title = 'Code Now'
 theme = 'paper'
+
+# 多语言：中文是原文，留在根路径（老 URL 一个都不变）；英文译文放 /en/ 下。
+# 译文由 translate_issue.py 生成、CI 提交到 translations/en/，再由
+# fetch_github_content.py 在构建时落成 content/posts/*.en.md。
+defaultContentLanguage = 'zh-cn'
+defaultContentLanguageInSubdir = false
+
+[languages]
+  [languages.zh-cn]
+    languageCode = 'zh-cn'
+    languageName = '中文'
+    weight = 1
+  [languages.en]
+    languageCode = 'en'
+    languageName = 'English'
+    weight = 2
 
 # Permalink settings
 [permalinks]
@@ -57,6 +72,9 @@ theme = 'paper'
 
     # Release issue sync
     releases_dir = "content/posts"
+
+    # 英文译文目录（translate_issue.py 的产物）。构建时只读本地文件，不调 LLM。
+    translations_dir = "translations/en"
 
     exclude_tags = ["Release"]  # Tags to exclude.
 

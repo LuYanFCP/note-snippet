@@ -590,3 +590,42 @@ article pre.mermaid:not([data-processed="true"]) {
 article pre.mermaid[data-processed="true"] {
   visibility: visible;
 }
+
+/* ----------------------------------------------------------------------
+   机翻声明条 —— 英文译文页顶部那行提示。
+   刻意做得克制：一条左边框 + 小字，提示身份但不抢文章的注意力。
+   ---------------------------------------------------------------------- */
+.mt-notice:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  margin: 0 0 2rem;
+  padding: 0.6rem 0 0.6rem 0.9rem;
+  border-left: 2px solid rgb(0 0 0 / 18%);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  opacity: 0.65;
+}
+
+.mt-notice a:not(#\#):not(#\#) {
+  margin-left: 0.5em;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.dark .mt-notice:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  border-left-color: rgb(255 255 255 / 25%);
+}
+
+/* 语言切换胶囊：悬停才轻微提亮，静止时几乎隐形 */
+.lang-switch a:not(#\#):not(#\#) {
+  text-decoration: none;
+  opacity: 0.7;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.lang-switch a:hover:not(#\#):not(#\#) {
+  opacity: 1;
+  background-color: rgb(0 0 0 / 4%);
+}
+
+.dark .lang-switch a:hover:not(#\#):not(#\#) {
+  background-color: rgb(255 255 255 / 8%);
+}

@@ -43,6 +43,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 先确认 key 拿得到再干别的。踩过一次：secret 建在 Environment 里，
+      # job 没声明 environment:，${{ secrets.X }} 就是空字符串，
+      # 一路跑到调 API 才报一个看不懂的 401。
+      - name: 检查 DEEPSEEK_API_KEY
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          if [ -z "${DEEPSEEK_API_KEY:-}" ]; then
+            echo "::error::拿不到 DEEPSEEK_API_KEY"
+            echo "它必须是 Repository secret："
+            echo "  Settings → Secrets and variables → Actions → Repository secrets"
+            echo "建在 Environment 下的 secret，job 不声明 environment: 是读不到的。"
+            exit 1
+          fi
+          echo "DEEPSEEK_API_KEY 已就绪（长度 ${#DEEPSEEK_API_KEY}）"
+
       - uses: astral-sh/setup-uv@v5
 
       # 先验掩码规则没破 —— 这步不花钱，但能挡住「公式被译坏」这类事故

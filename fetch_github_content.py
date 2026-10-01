@@ -4,6 +4,7 @@
 #   "pytz"
 # ]
 # ///
+import json
 import os
 import re
 import requests
@@ -161,6 +162,88 @@ def extract_frontmatter_info(content: str) -> tuple[str | None, str]:
     return date_str, content_without_frontmatter
 
 
+def slugify(title: str) -> str:
+    """标题 → 文件名用的 slug。中英文共用同一套规则。"""
+    safe = re.sub(r'[^\w\s-]', '', title).strip().lower()
+    return re.sub(r'[-\s]+', '-', safe)
+
+
+def resolve_issue_date(issue: dict, body: str, existing_content: str | None) -> str:
+    """优先级：已存在文件的 date > 正文 frontmatter 的 date > issue 创建时间。
+
+    单独拎出来，是为了让 .md 和 .en.md 拿到同一个日期。
+    """
+    created_at = datetime.strptime(issue["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+    body_date, _ = extract_frontmatter_info(body)
+    existing_date, _ = extract_frontmatter_info(existing_content)
+    return existing_date or body_date or created_at.strftime('%Y-%m-%d %H:%M:%S')
+
+
+def load_translation(translations_dir: str, name: str) -> dict | None:
+    """读 translate_issue.py 产出的译文，返回 {title, body, model, ...}。
+
+    没有译文就返回 None —— 这篇文章就只有中文版，英文页不会生成，
+    语言切换按钮也不会出现。构建不依赖任何 LLM 调用。
+    """
+    path = os.path.join(translations_dir, f"{name}.md")
+    if not os.path.exists(path):
+        return None
+
+    with open(path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    m = re.match(r'^---\s*\n(.*?)\n---\s*\n?', content, re.DOTALL)
+    if not m:
+        print(f"  警告：{path} 缺少 frontmatter，跳过")
+        return None
+
+    meta = {}
+    for line in m.group(1).split('\n'):
+        if ':' not in line:
+            continue
+        key, _, value = line.partition(':')
+        try:
+            meta[key.strip()] = json.loads(value.strip())
+        except json.JSONDecodeError:
+            meta[key.strip()] = value.strip().strip('"')
+
+    meta['body'] = content[m.end():].lstrip()
+    return meta
+
+
+def convert_translation_to_markdown(issue: dict, translation: dict, repo_owner: str,
+                                    repo_name: str, date_str: str) -> tuple[str, str]:
+    """把译文包成 Hugo 的英文页。
+
+    和中文版共用 translationKey 和 date，Hugo 才认得出这是同一篇的两个语言版本。
+    """
+    number = issue["number"]
+    title_en = translation.get('title') or issue["title"]
+    labels = [label["name"] for label in issue.get("labels", [])]
+
+    frontmatter = f"""---
+title: "{title_en.replace('"', "'")}"
+date: {date_str}
+author: {issue["user"]["login"]}
+issue_number: {number}
+repo: "{repo_owner}/{repo_name}"
+translationKey: "issue-{number}"
+machine_translated: true
+translation_model: "{translation.get('model', 'unknown')}"
+"""
+    if labels:
+        frontmatter += "tags:\n"
+        for label in labels:
+            frontmatter += f"    - {label}\n"
+    frontmatter += "---\n\n"
+
+    content = frontmatter + translation['body']
+    content += f"\n\n---\n\n[View the original issue](https://github.com/{repo_owner}/{repo_name}/issues/{number})"
+
+    filename = f"{repo_name}-{number}-{slugify(title_en)}.en.md"
+    return content, filename
+
+
 def convert_issue_to_markdown(issue: dict, repo_owner: str, repo_name: str, existing_content: str | None = None) -> tuple[str, str]:
     """
     将issue内容转换为Markdown格式，包括标签
@@ -179,28 +262,26 @@ def convert_issue_to_markdown(issue: dict, repo_owner: str, repo_name: str, exis
     title = issue["title"]
     body = issue["body"] or ""
     number = issue["number"]
-    created_at = datetime.strptime(issue["created_at"], "%Y-%m-%dT%H:%M:%SZ")
     author = issue["user"]["login"]
     
     # 提取标签
     labels = [label["name"] for label in issue.get("labels", [])]
     
+    date_str = resolve_issue_date(issue, body, existing_content)
+    
     # Extract date from body frontmatter and remove frontmatter from body
-    body_date, body = extract_frontmatter_info(body)
-    
-    # Extract date from existing file's frontmatter
-    existing_date, _ = extract_frontmatter_info(existing_content)
-    
-    # Priority: existing file date > body frontmatter date > issue created_at
-    date_str = existing_date or body_date or created_at.strftime('%Y-%m-%d %H:%M:%S')
+    _, body = extract_frontmatter_info(body)
     
     # 创建frontmatter
+    # translationKey 让 Hugo 把 .md 和 .en.md 配成同一篇的两个语言版本，
+    # 这样两边的文件名可以各自用各自语言的 slug。
     frontmatter = f"""---
 title: "{title}"
 date: {date_str}
 author: {author}
 issue_number: {number}
 repo: "{repo_owner}/{repo_name}"
+translationKey: "issue-{number}"
 """
     
     # 添加标签到frontmatter
@@ -218,10 +299,7 @@ repo: "{repo_owner}/{repo_name}"
     markdown_content += f"\n\n---\n\n[查看原始Issue](https://github.com/{repo_owner}/{repo_name}/issues/{number})"
     
     # 生成文件名 (使用issue编号和标题)
-    # 移除非法字符，将空格替换为短横线
-    safe_title = re.sub(r'[^\w\s-]', '', title).strip().lower()
-    safe_title = re.sub(r'[-\s]+', '-', safe_title)
-    filename = f"{repo_name}-{number}-{safe_title}.md"
+    filename = f"{repo_name}-{number}-{slugify(title)}.md"
     
     return markdown_content, filename
 
@@ -323,7 +401,7 @@ def save_markdown_file(content, filename, output_dir):
     
     print(f"Saved: {file_path}")
 
-def save_readme_to_file(readme_content, output_path, title="首页"):
+def save_readme_to_file(readme_content, output_path, title="首页", machine_translated=False):
     """
     将README内容保存到指定文件
     
@@ -345,9 +423,10 @@ title: "{title}"
 date: {now}
 lastmod: {now}
 draft: false
----
-
 """
+    if machine_translated:
+        front_matter += "machine_translated: true\n"
+    front_matter += "---\n\n"
     
     # 写入文件
     with open(output_path, 'w', encoding='utf-8') as f:
@@ -391,6 +470,7 @@ def main():
     username = github_config.get('username', '')
     branch = github_config.get('branch', 'main')
     token = args.token or github_config.get('token', None)
+    translations_dir = github_config.get('translations_dir', 'translations/en')
     
     # 检查是否启用
     if not enabled:
@@ -411,6 +491,17 @@ def main():
         readme_content = fetch_github_readme(username, branch, token)
         if readme_content:
             save_readme_to_file(readme_content, readme_path, readme_title)
+
+            # 英文版 /about。README 现在本来就是英文，译文是原样透传，
+            # 所以 translated_blocks 为 0 时不打「机器翻译」标记 —— 那会是假话。
+            about_en = load_translation(translations_dir, 'about')
+            if about_en:
+                save_readme_to_file(
+                    about_en['body'],
+                    re.sub(r'\.md$', '.en.md', readme_path),
+                    about_en.get('title', 'About'),
+                    machine_translated=bool(about_en.get('translated_blocks')),
+                )
     
     # 2. 获取并保存Release标签的issue
     if not args.skip_releases:
@@ -435,6 +526,7 @@ def main():
             print(f"正在从GitHub获取{repo_owner}/{repo_name}的Release标签issue...")
             issues = fetch_issues_with_release_tag(repo_owner, repo_name, token)
             print(f"找到{len(issues)}个带有Release标签的issue")
+            translated_count = 0
             
             # 转换并保存每个issue
             for issue in issues:
@@ -450,6 +542,19 @@ def main():
                 
                 markdown_content, filename = convert_issue_to_markdown(issue, repo_owner, repo_name, existing_content)
                 save_markdown_file(markdown_content, filename, releases_dir)
+
+                # 英文译文（如果 translate_issue.py 已经生成过）。
+                # 没有就跳过：这篇文章只出中文版，不影响构建。
+                translation = load_translation(translations_dir, f"issue-{issue['number']}")
+                if translation:
+                    date_str = resolve_issue_date(issue, issue.get("body") or "", existing_content)
+                    en_content, en_filename = convert_translation_to_markdown(
+                        issue, translation, repo_owner, repo_name, date_str
+                    )
+                    save_markdown_file(en_content, en_filename, releases_dir)
+                    translated_count += 1
+
+            print(f"其中{translated_count}篇有英文译文（来自{translations_dir}）")
     
     # 3. 获取并保存标签（除Release外）
     if not args.skip_tags:

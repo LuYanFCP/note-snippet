@@ -1,0 +1,45 @@
+# 术语表 —— 注入翻译 prompt，强制固定译法。
+#
+# 左边是中文写法，右边是英文里必须出现的写法。只放「模型会译错或译歪」的词：
+# 通用词不用列，列多了会稀释 prompt 的注意力。
+#
+# 改了这里 → 下次 CI 会把受影响的块重翻（因为 glossary 版本号参与缓存 key）。
+# 只想钉死某一句的译法，改 i18n/cache/issue-N.json 里对应 hash 的 value 更直接。
+
+[terms]
+"注意力" = "attention"
+"多头注意力" = "multi-head attention"
+"稀疏注意力" = "sparse attention"
+"键值缓存" = "KV cache"
+"显存" = "GPU memory"
+"算子" = "operator (kernel)"
+"算子融合" = "kernel fusion"
+"张量并行" = "tensor parallelism"
+"流水线并行" = "pipeline parallelism"
+"推理" = "inference"
+"训练" = "training"
+"吞吐" = "throughput"
+"时延" = "latency"
+"访存" = "memory access"
+"带宽受限" = "memory-bandwidth bound"
+"计算受限" = "compute bound"
+"低秩" = "low-rank"
+"投影" = "projection"
+"位置编码" = "positional encoding"
+"旋转位置编码" = "RoPE"
+"量化" = "quantization"
+"蒸馏" = "distillation"
+"预填充" = "prefill"
+"解码" = "decode"
+"上下文长度" = "context length"
+"词表" = "vocabulary"
+"调度" = "scheduling"
+"图捕获" = "graph capture"
+"内核启动" = "kernel launch"
+"闭包" = "closure"
+"作用域" = "scope"
+"命名空间" = "namespace"
+"装饰器" = "decorator"
+"逆序对" = "inversions"
+"树状数组" = "Fenwick tree (binary indexed tree)"
+"事务" = "transaction"

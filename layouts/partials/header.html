@@ -4,7 +4,7 @@
   <div class="relative z-50 flex items-center ltr:mr-auto rtl:ml-auto">
     <a
       class="-translate-y-[1px] text-2xl font-medium"
-      href="{{- `` | absURL -}}"
+      href="{{- `` | absLangURL -}}"
       >{{ site.Title }}</a
     >
     <div
@@ -76,8 +76,33 @@
       {{- range . -}}
       <a
         class="block text-center text-xl leading-[5rem] lg:text-base lg:font-normal"
-        href="{{- .URL -}}"
+        href="{{- .URL | relLangURL -}}"
         >{{- .Name -}}</a
+      >
+      {{- end -}}
+    </nav>
+    {{- end -}}<!---->
+
+    {{- /* 语言切换：只有当前页存在其他语言版本时才渲染，缺译文则整块不出现。
+           首页/列表页这类 node 页面在两个语言下都天然存在，所以额外要求
+           目标语言真的有文章 —— 否则一篇译文都还没有时，首页会出现一个
+           指向空英文站的按钮。 */ -}}
+    {{- $langs := slice -}}
+    {{- range .Translations -}}
+    {{- if or .IsPage (gt (len .Site.RegularPages) 0) -}}
+    {{- $langs = $langs | append . -}}
+    {{- end -}}
+    {{- end -}}
+    {{- with $langs -}}
+    <nav
+      class="lang-switch mt-10 flex justify-center lg:mt-0 lg:items-center ltr:lg:ml-10 rtl:lg:mr-10"
+    >
+      {{- range . -}}
+      <a
+        class="block rounded-full border border-black/15 px-4 py-1 text-xl leading-normal no-underline lg:text-sm dark:border-white/20"
+        href="{{- .RelPermalink -}}"
+        hreflang="{{- .Lang -}}"
+        >{{- .Language.LanguageName -}}</a
       >
       {{- end -}}
     </nav>
@@ -91,7 +116,7 @@
       <a
         class="h-7 w-7 text-[0px] [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6"
         style="--url: url(./{{- . -}}.svg)"
-        href="{{- if eq . `rss` -}}{{- `index.xml` | absURL -}}{{- else if eq . `mastodon` -}}{{- index site.Params . -}}{{- else -}}{{- if eq . `threads` -}}https://threads.net/{{- else if eq . `bluesky` -}}https://bsky.app/profile/{{- else if eq . `twitter` -}}https://x.com/{{- else -}}https://{{- . -}}.com/{{- end -}}{{- if eq . `linkedin` -}}in/{{- end -}}{{- index site.Params . -}}{{- end -}}"
+        href="{{- if eq . `rss` -}}{{- `index.xml` | absLangURL -}}{{- else if eq . `mastodon` -}}{{- index site.Params . -}}{{- else -}}{{- if eq . `threads` -}}https://threads.net/{{- else if eq . `bluesky` -}}https://bsky.app/profile/{{- else if eq . `twitter` -}}https://x.com/{{- else -}}https://{{- . -}}.com/{{- end -}}{{- if eq . `linkedin` -}}in/{{- end -}}{{- index site.Params . -}}{{- end -}}"
         target="_blank"
         rel="{{- if eq . `rss` -}}alternate{{- else -}}me{{- end -}}"
       >

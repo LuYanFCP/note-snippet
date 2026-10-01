@@ -1,5 +1,6 @@
 content/posts/*
 content/about.md
+content/about.en.md
 content/about/
 public
 .DS_Store
@@ -8,3 +9,7 @@ public
 .playwright-mcp/
 code-*.png
 mermaid-*.png
+
+# 本地跑翻译脚本用的密钥，不进仓库
+.env.local
+__pycache__/

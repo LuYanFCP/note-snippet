@@ -638,13 +638,29 @@ def load_translation(out_dir: str, name: str) -> str | None:
         return f.read()
 
 
-def store_translation(out_dir: str, name: str, meta: dict, body: str) -> str:
+def _without_timestamp(text: str) -> str:
+    return re.sub(r'^translated_at:.*$\n?', '', text, flags=re.M)
+
+
+def store_translation(out_dir: str, name: str, meta: dict, body: str) -> tuple[str, bool]:
+    """写出译文，返回 (路径, 是否真的改了)。
+
+    只有 translated_at 不同就当作没变。否则每跑一次 CI，13 个文件都会各改一行
+    时间戳，于是每次 issue 编辑都换来一个「只动时间戳」的 bot 提交和一次毫无
+    意义的站点重建 —— 而「译文无变化」那条分支永远走不到。
+    """
     os.makedirs(out_dir, exist_ok=True)
     path = os.path.join(out_dir, f"{name}.md")
     front = "\n".join(f"{k}: {json.dumps(v, ensure_ascii=False)}" for k, v in meta.items())
+    content = f"---\n{front}\n---\n\n{body}\n"
+
+    old = load_translation(out_dir, name)
+    if old is not None and _without_timestamp(old) == _without_timestamp(content):
+        return path, False
+
     with open(path, "w", encoding="utf-8") as f:
-        f.write(f"---\n{front}\n---\n\n{body}\n")
-    return path
+        f.write(content)
+    return path, True
 
 
 # ----------------------------------------------------------------------
@@ -788,7 +804,8 @@ def write_result(name: str, title: str, title_en: str, body: str, body_en: str,
         print(body_en)
         return
 
-    print(f"    → {store_translation(args.out_dir, name, meta, body_en)}")
+    path, changed = store_translation(args.out_dir, name, meta, body_en)
+    print(f"    → {path}" if changed else f"    = {path}（内容未变，未改动文件）")
 
 
 def translate_issue(issue: dict, translator, args, glossary_fp: str) -> None:

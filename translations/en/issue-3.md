@@ -4,7 +4,7 @@ title_zh: "讲给老婆的数据系统设计-ACID事务"
 source_hash: "cf833670217e2267a41dda2ebd09e784cda537b47c66176d3d99fd2ed42974a8"
 model: "deepseek-chat"
 cache_version: 1
-translated_at: "2026-10-01T15:25:01Z"
+translated_at: "2026-10-02T05:26:00Z"
 issue_number: 3
 translated_blocks: 11
 ---

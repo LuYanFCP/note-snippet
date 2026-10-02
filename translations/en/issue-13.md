@@ -4,7 +4,7 @@ title_zh: "如何让hugo支持infographic"
 source_hash: "bd00da44171676c51bcd2bb794eebdd9f63b81b63914b3bdcaad9dd5e33d2aa1"
 model: "deepseek-chat"
 cache_version: 1
-translated_at: "2026-10-01T15:25:00Z"
+translated_at: "2026-10-02T05:26:00Z"
 issue_number: 13
 translated_blocks: 5
 ---

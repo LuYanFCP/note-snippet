@@ -4,7 +4,7 @@ title_zh: "About"
 source_hash: "341fd60b849737970d22185f18d857811fbbb470646d9bbedd4309a1d0e0fae1"
 model: "deepseek-chat"
 cache_version: 1
-translated_at: "2026-10-01T15:24:55Z"
+translated_at: "2026-10-02T05:26:00Z"
 translated_blocks: 1
 ---
 

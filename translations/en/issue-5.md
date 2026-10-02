@@ -4,7 +4,7 @@ title_zh: "从零开始的 LLM Agent编程生活--MCP 篇"
 source_hash: "968e5d6877358342754eee642f7737ae1cbc55fb7649fd238c18089b7dd0e189"
 model: "deepseek-chat"
 cache_version: 1
-translated_at: "2026-10-01T15:25:01Z"
+translated_at: "2026-10-02T05:26:00Z"
 issue_number: 5
 translated_blocks: 12
 ---

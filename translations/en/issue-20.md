@@ -4,7 +4,7 @@ title_zh: "DeepSeek 的 Attention演进 -【MLA】"
 source_hash: "028d84af64bcdd8bf6b72befb5823863f587827bbbd7fcc51adb67e2f0e4bf14"
 model: "deepseek-chat"
 cache_version: 1
-translated_at: "2026-10-01T15:24:57Z"
+translated_at: "2026-10-02T05:26:00Z"
 issue_number: 20
 translated_blocks: 15
 ---

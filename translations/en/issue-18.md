@@ -4,7 +4,7 @@ title_zh: "[Python基础] 命名空间、作用域以及闭包"
 source_hash: "b351fe7a448e7e2f3df1c378453e0586b45a368c825f51b3ce8aad76624c2621"
 model: "deepseek-chat"
 cache_version: 1
-translated_at: "2026-10-01T15:24:59Z"
+translated_at: "2026-10-02T05:26:00Z"
 issue_number: 18
 translated_blocks: 10
 ---

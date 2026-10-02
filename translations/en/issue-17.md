@@ -4,7 +4,7 @@ title_zh: "[Python基础] 装饰器"
 source_hash: "2ccb7cbeedfaedd4e79b2986ef9f8ba0bc66f911a33f4d5737777e655ef65a34"
 model: "deepseek-chat"
 cache_version: 1
-translated_at: "2026-10-01T15:24:59Z"
+translated_at: "2026-10-02T05:26:00Z"
 issue_number: 17
 translated_blocks: 3
 ---

@@ -4,7 +4,7 @@ title_zh: "EM算法笔记"
 source_hash: "de96643fb3ec9c06bbcd65a450574ab110fe7556c71d6aeee9edda77ab768abb"
 model: "deepseek-chat"
 cache_version: 1
-translated_at: "2026-10-01T15:24:59Z"
+translated_at: "2026-10-02T05:26:00Z"
 issue_number: 16
 translated_blocks: 8
 ---

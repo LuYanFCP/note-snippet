@@ -94,14 +94,12 @@
     {{- end -}}
     {{- end -}}
     {{- with $langs -}}
-    <nav
-      class="lang-switch mt-10 flex justify-center lg:mt-0 lg:items-center ltr:lg:ml-10 rtl:lg:mr-10"
-    >
+    {{- /* 样式全部手写在 assets/custom.css。主题的 main.css 是预编译好的
+           Tailwind，build.sh 里没有 Tailwind 构建步骤，所以这里写主题没用过的
+           工具类不会生成任何 CSS —— 是静默失效，不会报错。 */ -}}
+    <nav class="lang-switch" aria-label="{{- i18n `language` | default `Language` -}}">
       {{- range . -}}
-      <a
-        class="block rounded-full border border-black/15 px-4 py-1 text-xl leading-normal no-underline lg:text-sm dark:border-white/20"
-        href="{{- .RelPermalink -}}"
-        hreflang="{{- .Lang -}}"
+      <a href="{{- .RelPermalink -}}" hreflang="{{- .Lang -}}"
         >{{- .Language.LanguageName -}}</a
       >
       {{- end -}}

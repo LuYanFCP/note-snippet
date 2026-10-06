@@ -676,3 +676,71 @@ article pre.mermaid[data-processed="true"] {
     line-height: 1.2;
   }
 }
+
+/* ----------------------------------------------------------------------
+   推荐阅读页 /reading/（layouts/_default/reading.html）。
+
+   故意做得很素：没有卡片、没有色块，就是一份按年分组的书目，日期挂在
+   左边一栏。外层 .not-prose 躲开 Typography 的列表样式；盒模型属性要压过
+   Tailwind 的全局 reset，所以照旧五个 :not(#\#)，理由见本文件顶部。
+   ---------------------------------------------------------------------- */
+.reading-year:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  margin: 3rem 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 400;
+  opacity: 0.5;
+}
+
+.reading-list:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.reading-item:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr;
+  margin-bottom: 1.75rem;
+}
+
+.reading-date:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  padding-top: 0.15rem;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.45;
+}
+
+.reading-title:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.5;
+  text-decoration: underline;
+  text-decoration-color: rgba(128, 128, 128, 0.35);
+  text-underline-offset: 4px;
+}
+
+.reading-title:hover:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  text-decoration-color: currentColor;
+}
+
+.reading-note:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  margin-top: 0.25rem;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  opacity: 0.8;
+}
+
+.reading-note a:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.reading-meta:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  opacity: 0.5;
+}
+
+.reading-tag:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  margin-inline-start: 0.6em;
+}

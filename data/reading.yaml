@@ -1,0 +1,31 @@
+# 推荐阅读列表，渲染到 /reading/（模板在 layouts/_default/reading.html）。
+#
+# 每条一个条目，页面按 date 倒序排，不用手动排序：
+#   title   必填  文章标题
+#   url     必填  原文链接
+#   author  可选  作者 / 博客名
+#   date    可选  推荐日期 YYYY-MM-DD，缺省的排在最后
+#   tags    可选  标签列表
+#   note    可选  推荐理由，支持 Markdown。可以直接写一段字符串，中英文
+#                 页面共用；也可以按语言分开写：
+#                   note:
+#                     zh-cn: 中文
+#                     en: English
+#                 英文页缺 en 时退回显示中文。
+#                 中文别用 >- 折行写：折行处会变成空格，夹在汉字中间很难看。
+#
+# 中英文页面共用这一份数据；title / author / tags 不区分语言。
+
+- title: "Reinforcement Learning for LLMs: The Complete Guide"
+  url: "https://cameronrwolfe.substack.com/p/llm-rl"
+  author: "Cameron R. Wolfe"
+  date: 2026-10-06
+  tags: ["LLM", "RL"]
+  note:
+    zh-cn: "我读过的 LLM-RL 介绍里最全的一篇。从价值函数、优势、KL、重要性采样这些基础讲起，经过 REINFORCE / RLOO 和 PPO，再到 GRPO 和它的一串改进（DAPO、GSPO、Dr. GRPO、CISPO），最后谈到 rubric 奖励、RL scaling law 和 agentic RL。推导和 PyTorch 代码都给全了，篇幅很长，适合收藏起来当手册翻。"
+    en: >-
+      The most thorough intro to RL for LLMs I've read. It starts from value functions,
+      advantages, KL and importance sampling, works through REINFORCE / RLOO and PPO, then
+      GRPO and its follow-ups (DAPO, GSPO, Dr. GRPO, CISPO), and ends on rubric rewards,
+      RL scaling laws and agentic RL. Full derivations and PyTorch code throughout. It's
+      long, so treat it as a reference to come back to.

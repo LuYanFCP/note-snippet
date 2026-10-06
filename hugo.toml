@@ -34,13 +34,17 @@ defaultContentLanguageInSubdir = false
     url = "/about/"
     weight = 2
   [[menu.main]]
+    name = "Reading"
+    url = "/reading/"
+    weight = 3
+  [[menu.main]]
     name = "Tags"
     url = "/tags/"
-    weight = 3
+    weight = 4
   [[menu.main]]
     name = "Subscribe"
     url = "/index.xml"
-    weight = 4
+    weight = 5
 
 [params]
   author = 'LuYanFCP'

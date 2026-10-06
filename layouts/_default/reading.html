@@ -1,0 +1,64 @@
+{{- /*
+  推荐阅读页：content/reading.md（及 .en.md）用 layout: reading 指过来，
+  条目数据在 data/reading.yaml。正文写在 md 里当开场白，下面是按年
+  分组的列表。
+
+  样式全部在 assets/custom.css 的 .reading-* 下 —— 主题的 main.css 是
+  预编译的 Tailwind，这里写新的工具类不会生效（见 header.html 的说明）。
+*/ -}}
+{{- define "main" -}}
+
+<article>
+  <header class="mb-14">
+    <h1 class="my-0! pb-2.5">{{- .Title -}}</h1>
+  </header>
+
+  <section>{{- .Content -}}</section>
+
+  {{- $items := sort (site.Data.reading | default slice) "date" "desc" -}}
+  {{- with $items -}}
+  {{- /* 按年分组，像一本读书记录；没填 date 的归到最后一组，不显示年份 */ -}}
+  {{- $years := slice -}}
+  {{- range . -}}
+  {{- $y := cond (isset . "date") (time.Format "2006" .date) "" -}}
+  {{- if not (in $years $y) -}}{{- $years = $years | append $y -}}{{- end -}}
+  {{- end -}}
+  <div class="reading not-prose">
+    {{- range $y := $years -}}
+    {{- with $y -}}<h2 class="reading-year">{{- . -}}</h2>{{- end -}}
+    <ul class="reading-list">
+      {{- range $items -}}
+      {{- if eq $y (cond (isset . "date") (time.Format "2006" .date) "") -}}
+      <li class="reading-item">
+        <time class="reading-date">{{- with .date -}}{{- time.Format "01-02" . -}}{{- end -}}</time>
+        <div>
+          <a class="reading-title" href="{{- .url -}}" target="_blank" rel="noopener">{{- .title -}}</a>
+          {{- /* note 可以是一段字符串（两种语言共用），也可以按语言分写：
+                 {zh-cn: ..., en: ...}；当前语言没写就退回中文 */ -}}
+          {{- $note := .note -}}
+          {{- if reflect.IsMap $note -}}
+          {{- $note = index $note site.Language.Lang | default (index $note "zh-cn") -}}
+          {{- end -}}
+          {{- with $note -}}
+          <div class="reading-note">{{- . | markdownify -}}</div>
+          {{- end -}}
+          <div class="reading-meta">
+            {{- $meta := slice -}}
+            {{- with .author -}}{{- $meta = $meta | append . -}}{{- end -}}
+            {{- $meta = $meta | append ((urls.Parse .url).Host | strings.TrimPrefix "www.") -}}
+            {{- delimit $meta " · " -}}
+            {{- range .tags -}}<span class="reading-tag">#{{- . -}}</span>{{- end -}}
+          </div>
+        </div>
+      </li>
+      {{- end -}}
+      {{- end -}}
+    </ul>
+    {{- end -}}
+  </div>
+  {{- else -}}
+  <p class="reading-meta">{{- i18n "reading_empty" -}}</p>
+  {{- end -}}
+</article>
+
+{{- end -}}

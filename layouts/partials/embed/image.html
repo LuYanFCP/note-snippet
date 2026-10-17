@@ -1,0 +1,22 @@
+{{- /*
+  把卡片里的远程图片（头像、配图、封面）在构建时下载下来，跟站点一起发布，
+  返回本地地址；下载失败就退回原地址，卡片照样能出来。
+
+  为什么不直接热链：
+    - pbs.twimg.com 在大陆打不开，热链的话国内读者看到的是一排裂图；
+    - hdslb.com（B 站图床）有防盗链，带着本站 Referer 去请求直接 403。
+
+  文件名用 URL 的 md5，落在 /embeds/ 下 —— Hugo 默认按 URL 路径起名，
+  B 站那种 `xxx.jpg@640w_360h_1c.webp` 会原样出现在站点根目录。
+*/ -}}
+{{- $url := . -}}
+{{- $out := $url -}}
+{{- with try (resources.GetRemote $url) -}}
+  {{- with .Err -}}
+    {{- warnf "[embed] 图片下载失败，退回原地址 %s: %s" $url . -}}
+  {{- else with .Value -}}
+    {{- $name := printf "embeds/%s.%s" (md5 $url) .MediaType.FirstSuffix.Suffix -}}
+    {{- $out = (resources.Copy $name .).RelPermalink -}}
+  {{- end -}}
+{{- end -}}
+{{- return $out -}}

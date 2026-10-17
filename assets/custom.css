@@ -744,3 +744,519 @@ article pre.mermaid[data-processed="true"] {
 .reading-tag:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
   margin-inline-start: 0.6em;
 }
+
+/* ----------------------------------------------------------------------
+   X / B 站卡片（```x / ```bilibili 代码块，模板在 layouts/partials/embed/）。
+
+   跟 alert 用同一套「纸」的语言：发丝边、4px 印刷圆角、颜色锁在亚麻纸的
+   暖色相上，不带平台自己的品牌色 —— X 的黑、B 站的粉蓝放进来都会像贴在
+   纸上的广告。平台只用右上角一个单色小标识交代出处。
+
+   外层带 .not-prose 躲开 Typography；盒模型属性要压过 Tailwind 的全局
+   reset，所以照旧五个 :not(#\#)，理由见本文件顶部。
+   ---------------------------------------------------------------------- */
+.embed-card {
+  --embed-fill: #fcfbf6;
+  --embed-rule: rgba(160, 133, 96, 0.34);
+  --embed-hover: rgba(160, 133, 96, 0.07);
+  --embed-muted: rgba(43, 36, 24, 0.55);
+  --embed-accent: #8a6f44;
+  --embed-shade: rgba(20, 18, 14, 0.6);   /* 压在图片上的角标底色 */
+}
+
+.dark .embed-card {
+  --embed-fill: rgba(243, 232, 207, 0.04);
+  --embed-rule: rgba(184, 150, 106, 0.26);
+  --embed-hover: rgba(243, 232, 207, 0.05);
+  --embed-muted: rgba(243, 232, 207, 0.55);
+  --embed-accent: #c9a77a;
+}
+
+.embed-card:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: block;
+  position: relative;
+  margin: 1.8em 0;
+  border: 1px solid var(--embed-rule);
+  border-radius: 4px;
+  background: var(--embed-fill);
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+
+.embed-card .embed-icon:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: block;
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+}
+
+/* 图标旁的文字说明只给读屏器 */
+.embed-sr:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 视频封面中间那颗播放键（X 的视频帖和 B 站共用） */
+.embed-play:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: auto;
+  border-radius: 50%;
+  background: var(--embed-shade);
+  color: #faf8f1;
+  transition: transform 0.2s ease;
+}
+
+.embed-play .embed-icon:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-left: 2px;   /* 三角形的视觉重心偏左，往右挪一点才显得居中 */
+}
+
+/* ---- X ---------------------------------------------------------------- */
+.x-card:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  max-width: 36rem;
+  padding: 1rem 1.15rem 0.8rem;
+}
+
+.x-head:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.x-author:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.x-avatar:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--embed-rule);
+}
+
+.x-names:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.x-name:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 600;
+}
+
+.x-name-text:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.x-author:hover .x-name-text:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.x-name .embed-icon-verified:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  width: 1.05em;
+  height: 1.05em;
+  color: var(--embed-accent);
+}
+
+.x-handle:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  font-size: 0.8rem;
+  color: var(--embed-muted);
+}
+
+.x-logo:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  flex: none;
+  margin-top: 0.15rem;
+  color: var(--embed-muted);
+  transition: color 0.2s ease;
+}
+
+a.x-logo:hover:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  color: inherit;
+}
+
+.x-replying:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  margin-top: 0.7rem;
+  font-size: 0.8rem;
+  color: var(--embed-muted);
+}
+
+.x-text:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  margin-top: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.x-replying + .x-text:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  margin-top: 0.2rem;
+}
+
+.x-text a:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#),
+.x-replying a:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  color: var(--embed-accent);
+}
+
+.x-text a:hover:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#),
+.x-replying a:hover:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 长链接截成一行，鼠标悬停看 href 就够了 */
+.x-url:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* 配图：1 张按原比例（太高的裁掉），2–4 张拼成一个 16:9 的格子 */
+.x-media:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+  aspect-ratio: 16 / 9;
+  margin-top: 0.8rem;
+  border: 1px solid var(--embed-rule);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.x-media-1:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: block;
+  aspect-ratio: auto;
+}
+
+.x-media-2 > .x-media-item:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#),
+.x-media-3 > .x-media-item:first-child:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  grid-row: span 2;
+}
+
+.x-media-item:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  position: relative;
+  display: block;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--embed-rule);
+}
+
+.x-media-item img:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.x-media-1 img:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  height: auto;
+  max-height: 30rem;
+}
+
+.x-media-item:hover .embed-play:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  transform: scale(1.08);
+}
+
+/* 引用的帖子：缩成一个小框，正文最多四行 */
+.x-quote:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: block;
+  margin-top: 0.8rem;
+  padding: 0.65rem 0.85rem 0.7rem;
+  border: 1px solid var(--embed-rule);
+  border-radius: 4px;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  transition: background-color 0.2s ease;
+}
+
+.x-quote:hover:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  background: var(--embed-hover);
+}
+
+.x-quote-head:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.x-quote-head .x-name-text:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  font-weight: 600;
+}
+
+.x-quote-avatar:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--embed-rule);
+}
+
+.x-quote-text:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: -webkit-box;
+  margin-top: 0.3rem;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.x-foot:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+  margin-top: 0.85rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--embed-rule);
+  font-size: 0.8rem;
+  color: var(--embed-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.x-date:hover:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#),
+.embed-missing-link:hover:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.x-stats:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: flex;
+  gap: 1.1rem;
+}
+
+.x-stat:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#),
+.bili-stat:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.x-stat .embed-icon:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#),
+.bili-stat .embed-icon:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+/* ---- B 站 ------------------------------------------------------------- */
+/* 整张卡片是一个链接：封面在左，标题/简介/UP 主在右；窄屏改成上下排 */
+.bili-card:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: flex;
+  gap: 1rem;
+  padding: 0.75rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+a.bili-card:hover:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  border-color: var(--embed-accent);
+}
+
+.bili-cover:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  position: relative;
+  flex: 0 0 40%;
+  aspect-ratio: 16 / 9;
+  align-self: flex-start;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--embed-rule);
+}
+
+.bili-cover img:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bili-cover .embed-play:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+a.bili-card:hover .embed-play:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  opacity: 1;
+}
+
+.bili-badge:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  position: absolute;
+  padding: 0 0.4rem;
+  border-radius: 3px;
+  background: var(--embed-shade);
+  color: #faf8f1;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.bili-duration:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  right: 0.4rem;
+  bottom: 0.4rem;
+}
+
+.bili-parts:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  left: 0.4rem;
+  top: 0.4rem;
+}
+
+.bili-body:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0.1rem 1.6rem 0.1rem 0;   /* 右边给角上的小电视让位 */
+}
+
+.bili-title:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#),
+.bili-desc:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#),
+.bili-part:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.bili-title:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+a.bili-card:hover .bili-title:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  color: var(--embed-accent);
+}
+
+.bili-part:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  margin-top: 0.2rem;
+  font-size: 0.84rem;
+  -webkit-line-clamp: 1;
+}
+
+.bili-desc:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  margin-top: 0.3rem;
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: var(--embed-muted);
+}
+
+.bili-meta:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1rem;
+  margin-top: auto;
+  padding-top: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--embed-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bili-up:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.bili-face:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--embed-rule);
+}
+
+.bili-stats:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.9rem;
+}
+
+.bili-brand:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  color: var(--embed-muted);
+}
+
+.bili-brand .embed-icon:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+@media (max-width: 560px) {
+  .bili-card:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+
+  .bili-cover:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+    flex: none;
+    width: 100%;
+  }
+
+  .bili-body:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+    padding-right: 0;
+  }
+
+  /* 上下排时电视标识挪到封面外，压在封面上会和「共 N P」角标打架 */
+  .bili-card:not(.embed-missing) .bili-brand:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+    display: none;
+  }
+}
+
+/* ---- 降级卡片：数据没拿到时只剩一句说明和原链接 ---------------------- */
+.embed-missing.bili-card:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: block;
+  max-width: 36rem;
+  padding: 1rem 1.15rem;
+}
+
+.embed-missing-text:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  margin-top: 0.6rem;
+  font-size: 0.88rem;
+  color: var(--embed-muted);
+}
+
+.bili-card .embed-missing-text:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  margin-top: 0;
+  padding-right: 1.6rem;
+}
+
+.embed-missing-text code:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  font-size: 0.85em;
+}
+
+.embed-missing-link:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  display: inline-block;
+  color: var(--embed-accent);
+  font-size: 0.85rem;
+}
+
+.bili-card .embed-missing-link:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  margin-top: 0.5rem;
+}

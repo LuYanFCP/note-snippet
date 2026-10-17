@@ -1,0 +1,21 @@
+{{- /*
+  帖子正文 -> HTML：转义，再把链接、@提及、#话题 包成 <a>，换行转 <br>。
+
+  只转义 & < >，引号留着：正文里的引号放在文本节点里本来就安全，而 htmlEscape
+  会把 " 变成 &#34; —— 紧跟在链接后面时，# 和数字会被链接的正则一起吞进 href。
+  链接字符集里也故意没有引号，所以生成的 href="..." 不会被正文截断。
+
+  顺序不能换：先包链接，后面两条的前置条件（不跟在 / 或单词字符后面、
+  前面是空白）保证它们不会再去碰链接里的 @ 和 #。
+
+  fxtwitter 给的 text 里 t.co 已经展开成原地址，媒体链接也已经去掉了。
+  换行转成 <br> 而不是靠 white-space: pre-wrap，是因为 hugo --minify
+  不认 CSS，会把文本里的连续空白折叠掉。
+*/ -}}
+{{- $s := replace (replace (replace . "&" "&amp;") "<" "&lt;") ">" "&gt;" -}}
+{{- /* 结尾那个字符不收句末标点：「见 https://a.com/b。」的句号不该进链接 */ -}}
+{{- $s = replaceRE `https?://((?:[A-Za-z0-9\-._~:/?#\[\]@!$()*+,=%]|&amp;)*[A-Za-z0-9\-_~/#=%+])` `<a class="x-url" href="$0" target="_blank" rel="noopener">$1</a>` $s -}}
+{{- $s = replaceRE `(^|[^\w/@])@(\w{1,15})` `${1}<a href="https://x.com/${2}" target="_blank" rel="noopener">@${2}</a>` $s -}}
+{{- $s = replaceRE `(^|\s)#([\p{L}\p{N}_]+)` `${1}<a href="https://x.com/hashtag/${2}" target="_blank" rel="noopener">#${2}</a>` $s -}}
+{{- $s = replace $s "\n" "<br>" -}}
+{{- return ($s | safeHTML) -}}

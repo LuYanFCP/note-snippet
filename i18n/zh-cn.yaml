@@ -3,3 +3,17 @@ machine_translated_notice: 本文是中文原文的机器翻译版本。
 read_original: 阅读中文原文
 language: 语言
 reading_empty: 暂时还没有推荐。
+
+# X / B 站卡片（layouts/partials/embed/）
+embed_x_post: X 上的帖子
+embed_view_on_x: 在 X 上查看
+embed_x_unavailable: 这条帖子加载不出来，可能已被删除或设为私密。
+embed_replying_to: 回复
+embed_replies: 回复
+embed_reposts: 转帖
+embed_likes: 喜欢
+embed_views: 播放
+embed_danmaku: 弹幕
+embed_parts: 共 {{ .Count }}P
+embed_bili_unavailable: 视频信息加载不出来
+embed_view_on_bilibili: 去 B 站观看

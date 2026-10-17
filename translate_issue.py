@@ -175,9 +175,12 @@ _SLASH = {"c", "cpp", "c++", "cc", "cu", "cuda", "h", "hpp", "java", "js", "jsx"
           "javascript", "ts", "tsx", "typescript", "go", "golang", "rust", "rs",
           "swift", "kotlin", "kt", "scala", "cs", "csharp", "php", "proto", "dart"}
 _DASH = {"sql", "lua", "haskell", "hs"}
-# 这些语言压根没有注释语法，一个字符都不该动
+# 这些语言压根没有注释语法，一个字符都不该动。
+# x / bilibili 是卡片块（layouts/_default/_markup/render-codeblock-*.html），
+# 里面一行一个链接 —— 不归进来的话会落到默认的 # 注释规则，URL 里的 #片段 就成了「注释」
 _NO_COMMENT = {"json", "jsonc", "csv", "tsv", "text", "txt", "plain", "plaintext",
-               "log", "output", "diff", "patch", "md", "markdown", "html", "xml"}
+               "log", "output", "diff", "patch", "md", "markdown", "html", "xml",
+               "x", "bilibili"}
 
 
 def comment_markers(kind: str) -> tuple[re.Pattern | None, bool, bool]:

@@ -1,0 +1,17 @@
+{{- /*
+  X（Twitter）帖子卡片。在 issue 里这样写：
+
+      ```x
+      https://x.com/_cosine_x/status/2107536458718589071
+      ```
+
+  一行一条，可以连着放好几条；twitter.com / fxtwitter.com 的链接和
+  纯数字 ID 也认。在 GitHub 上它就是个代码块，链接照样看得清。
+
+  渲染在 partials/embed/x.html，样式在 assets/custom.css 的 .x-card。
+*/ -}}
+{{- range split .Inner "\n" -}}
+  {{- with trim . " \t\r" -}}
+    {{- partial "embed/x.html" (dict "url" . "pos" $.Position) -}}
+  {{- end -}}
+{{- end -}}

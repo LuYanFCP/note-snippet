@@ -1,0 +1,17 @@
+{{- /*
+  B 站视频卡片。在 issue 里这样写：
+
+      ```bilibili
+      https://www.bilibili.com/video/BV17x411w7KC/?p=2
+      ```
+
+  一行一个；BV 号、av 号直接写也行。?p= 指定分 P，?t= 指定起始秒数，
+  其余参数（spm_id_from、vd_source 之类）会被丢掉。
+
+  渲染在 partials/embed/bilibili.html，样式在 assets/custom.css 的 .bili-card。
+*/ -}}
+{{- range split .Inner "\n" -}}
+  {{- with trim . " \t\r" -}}
+    {{- partial "embed/bilibili.html" (dict "url" . "pos" $.Position) -}}
+  {{- end -}}
+{{- end -}}

@@ -1,0 +1,18 @@
+{{- /*
+  卡片上的计数：中文按万/亿缩，英文按 K/M 缩，一位小数，去掉 ".0"。
+    172 -> 172    18,092 -> 1.8万 / 18.1K    45,825,722 -> 4582.6万 / 45.8M
+*/ -}}
+{{- $n := int (. | default 0) -}}
+{{- $units := slice (slice 100000000 "亿") (slice 10000 "万") -}}
+{{- if not (hasPrefix site.Language.Lang "zh") -}}
+  {{- $units = slice (slice 1000000000 "B") (slice 1000000 "M") (slice 1000 "K") -}}
+{{- end -}}
+{{- $out := lang.FormatNumber 0 $n -}}
+{{- range $units -}}
+  {{- $base := index . 0 -}}
+  {{- if ge $n $base -}}
+    {{- $out = printf "%s%s" (strings.TrimSuffix ".0" (printf "%.1f" (div (float $n) $base))) (index . 1) -}}
+    {{- break -}}
+  {{- end -}}
+{{- end -}}
+{{- return $out -}}

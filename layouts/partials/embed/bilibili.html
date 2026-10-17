@@ -1,0 +1,120 @@
+{{- /*
+  B 站视频卡片，由 _markup/render-codeblock-bilibili.html 调用。
+  参数：dict "url" 视频链接 / BV 号 / av 号，"pos" 代码块位置（报警用）。
+
+  数据走 B 站自己的 x/web-interface/view 接口，构建时取一次。
+  注意别给 GetRemote 加浏览器 UA：只带一个 "Mozilla/5.0" 反而会被风控
+  当成假浏览器，回 412；Hugo 默认的 UA 是能过的。
+
+  整张卡片就是一个链接，点了去 B 站看。链接只保留 p（分 P）和 t（起始秒数），
+  从 App 里复制出来的 spm_id_from、vd_source 这类追踪参数全部丢掉。
+  b23.tv 短链要多一次跳转才知道是哪个视频，这里不支持，贴完整链接。
+*/ -}}
+{{- $src := .url -}}
+{{- $query := "" -}}
+{{- with findRESubmatch `(BV[0-9A-Za-z]{10})` $src 1 -}}
+  {{- $query = printf "bvid=%s" (index . 0 1) -}}
+{{- else -}}
+  {{- with findRESubmatch `(?i)(?:^|/)av(\d+)` $src 1 -}}{{- $query = printf "aid=%s" (index . 0 1) -}}{{- end -}}
+{{- end -}}
+{{- $p := 0 -}}
+{{- with findRESubmatch `[?&]p=0*(\d+)` $src 1 -}}{{- $p = int (index . 0 1) -}}{{- end -}}
+{{- $start := "" -}}
+{{- with findRESubmatch `[?&]t=(\d+(?:\.\d+)?)` $src 1 -}}{{- $start = index . 0 1 -}}{{- end -}}
+
+{{- $v := dict -}}
+{{- if $query -}}
+  {{- with try (resources.GetRemote (printf "https://api.bilibili.com/x/web-interface/view?%s" $query)) -}}
+    {{- with .Err -}}
+      {{- warnf "[bilibili] %s: 请求 B 站失败：%s" $.pos . -}}
+    {{- else with .Value -}}
+      {{- if eq .MediaType.SubType "json" -}}
+        {{- $d := transform.Unmarshal . -}}
+        {{- /* 视频不存在时 HTTP 照样 200，code 是 -404 */ -}}
+        {{- if eq (int $d.code) 0 -}}{{- $v = $d.data -}}{{- end -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if not $v -}}{{- warnf "[bilibili] %s: 拿不到视频 %s，降级成链接卡片" .pos $src -}}{{- end -}}
+{{- else -}}
+  {{- warnf "[bilibili] %s: 认不出的视频链接 %q（b23.tv 短链请换成完整链接）" .pos $src -}}
+{{- end -}}
+
+{{- with $v -}}
+{{- $params := slice -}}
+{{- if gt $p 1 -}}{{- $params = $params | append (printf "p=%d" $p) -}}{{- end -}}
+{{- with $start -}}{{- $params = $params | append (printf "t=%s" .) -}}{{- end -}}
+{{- $href := printf "https://www.bilibili.com/video/%s/" .bvid -}}
+{{- with $params -}}{{- $href = printf "%s?%s" $href (delimit . "&") -}}{{- end -}}
+
+{{- /* 指定了分 P 就显示那一 P 的标题和时长；没指定、但视频有多 P，就在封面上标「共 N P」 */ -}}
+{{- $parts := int .videos -}}
+{{- $duration := int .duration -}}
+{{- $part := "" -}}
+{{- if and (gt $p 0) (le $p (len .pages)) -}}
+  {{- with index .pages (sub $p 1) -}}
+    {{- $duration = int .duration -}}
+    {{- if gt $parts 1 -}}{{- $part = printf "P%d · %s" $p .part -}}{{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- $clock := printf "%d:%02d" (div $duration 60) (mod $duration 60) -}}
+{{- if ge $duration 3600 -}}
+  {{- $clock = printf "%d:%02d:%02d" (div $duration 3600) (div (mod $duration 3600) 60) (mod $duration 60) -}}
+{{- end -}}
+
+{{- /* 封面和头像让 B 站图床按尺寸裁好再下：@<宽>w_<高>h_1c 是它的缩放参数 */ -}}
+{{- $pic := printf "%s@672w_378h_1c.webp" (replaceRE `^http:` "https:" .pic) -}}
+{{- $face := printf "%s@64w_64h_1c.webp" (replaceRE `^http:` "https:" .owner.face) -}}
+{{- $date := (time.AsTime (int .pubdate)).UTC -}}
+{{- $desc := trim .desc " \n\t-" -}}
+
+<a class="embed-card bili-card not-prose" href="{{ $href }}" target="_blank" rel="noopener">
+  <span class="bili-cover">
+    <img src="{{ partial "embed/image.html" $pic }}" alt="" width="672" height="378" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+    {{- if and (gt $parts 1) (not $part) -}}
+    <span class="bili-badge bili-parts">{{ i18n "embed_parts" $parts }}</span>
+    {{- end -}}
+    <span class="bili-badge bili-duration">{{ $clock }}</span>
+    <span class="embed-play">{{ partial "embed/icon.html" "play" }}</span>
+  </span>
+  <span class="bili-body">
+    <span class="bili-title">{{ .title }}</span>
+    {{- with $part -}}<span class="bili-part">{{ . }}</span>{{- end -}}
+    {{- with $desc -}}<span class="bili-desc">{{ . }}</span>{{- end -}}
+    <span class="bili-meta">
+      <span class="bili-up">
+        <img class="bili-face" src="{{ partial "embed/image.html" $face }}" alt="" width="20" height="20" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+        <span class="bili-up-name">{{ .owner.name }}</span>
+      </span>
+      <span class="bili-stats">
+        <span class="bili-stat" title="{{ i18n "embed_views" }}">
+          {{- partial "embed/icon.html" "views" -}}
+          <span class="embed-sr">{{ i18n "embed_views" }}</span>
+          {{- partial "embed/count.html" .stat.view -}}
+        </span>
+        <span class="bili-stat" title="{{ i18n "embed_danmaku" }}">
+          {{- partial "embed/icon.html" "danmaku" -}}
+          <span class="embed-sr">{{ i18n "embed_danmaku" }}</span>
+          {{- partial "embed/count.html" .stat.danmaku -}}
+        </span>
+        <time class="bili-date" datetime="{{ $date.Format "2006-01-02T15:04:05Z" }}">{{ $date.Add (time.ParseDuration "8h") | time.Format ":date_medium" }}</time>
+      </span>
+    </span>
+  </span>
+  <span class="bili-brand" aria-hidden="true">{{ partial "embed/icon.html" "bilibili" }}</span>
+</a>
+
+{{- else -}}
+{{- $id := "" -}}
+{{- with findRE `BV[0-9A-Za-z]{10}|(?i)av\d+` $src 1 -}}{{- $id = index . 0 -}}{{- end -}}
+{{- $href := "" -}}
+{{- if $id -}}{{- $href = printf "https://www.bilibili.com/video/%s/" $id -}}
+{{- else if hasPrefix $src "http" -}}{{- $href = $src -}}{{- end -}}
+<figure class="embed-card bili-card embed-missing not-prose">
+  <span class="bili-brand">{{ partial "embed/icon.html" "bilibili" }}</span>
+  <p class="embed-missing-text">{{ i18n "embed_bili_unavailable" }}{{ with $id }} <code>{{ . }}</code>{{ end }}</p>
+  {{- with $href -}}
+  <a class="embed-missing-link" href="{{ . }}" target="_blank" rel="noopener">{{ i18n "embed_view_on_bilibili" }} →</a>
+  {{- end -}}
+</figure>
+{{- end -}}

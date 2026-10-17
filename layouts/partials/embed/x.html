@@ -1,0 +1,139 @@
+{{- /*
+  X（Twitter）帖子卡片，由 _markup/render-codeblock-x.html 调用。
+  参数：dict "url" 帖子链接或纯数字 ID，"pos" 代码块在 Markdown 里的位置（报警用）。
+
+  数据走 FxTwitter 的公开 API（api.fxtwitter.com/status/<id>），构建时取一次。
+  没用 X 官方的 syndication 接口：那个接口长帖只给前 280 字，卡片上就只能
+  挂一个「Show more」，而博客引用一条帖子，要的恰恰是全文。
+
+  拿不到数据（帖子删了、设了私密、API 挂了）不让构建失败，退成一张只有
+  链接的卡片，同时 warnf 一句，构建日志里能看到是哪条。
+*/ -}}
+{{- $src := .url -}}
+{{- $handle := "" -}}
+{{- $id := "" -}}
+{{- with findRESubmatch `^(?:https?://)?(?:[\w-]+\.)*(?:x|twitter|fxtwitter|vxtwitter|fixupx)\.com/(\w+)/status(?:es)?/(\d+)` $src 1 -}}
+  {{- $handle = index . 0 1 -}}
+  {{- $id = index . 0 2 -}}
+{{- else -}}
+  {{- with findRESubmatch `^(\d+)$` $src 1 -}}{{- $id = index . 0 1 -}}{{- end -}}
+{{- end -}}
+
+{{- $t := dict -}}
+{{- if $id -}}
+  {{- with try (resources.GetRemote (printf "https://api.fxtwitter.com/status/%s" $id)) -}}
+    {{- with .Err -}}
+      {{- warnf "[x] %s: 请求 FxTwitter 失败：%s" $.pos . -}}
+    {{- else with .Value -}}
+      {{- /* 帖子不存在时 FxTwitter 回的是 200 + 一页 HTML，不是 404，所以要看类型 */ -}}
+      {{- if eq .MediaType.SubType "json" -}}
+        {{- $d := transform.Unmarshal . -}}
+        {{- if eq (int $d.code) 200 -}}{{- $t = $d.tweet -}}{{- end -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if not $t -}}{{- warnf "[x] %s: 拿不到帖子 %s，降级成链接卡片" .pos $src -}}{{- end -}}
+{{- else -}}
+  {{- warnf "[x] %s: 认不出的帖子链接 %q" .pos $src -}}
+{{- end -}}
+
+{{- with $t -}}
+{{- $url := .url -}}
+{{- $author := .author -}}
+{{- /* 静态站拿不到读者的时区，按东八区出日期（和文章日期一致，只显示到天） */ -}}
+{{- $date := (time.AsTime (int .created_timestamp)).UTC -}}
+<figure class="embed-card x-card not-prose">
+  <header class="x-head">
+    <a class="x-author" href="{{ $author.url }}" target="_blank" rel="noopener">
+      <img class="x-avatar" src="{{ partial "embed/image.html" $author.avatar_url }}" alt="" width="40" height="40" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+      <span class="x-names">
+        <span class="x-name">
+          <span class="x-name-text">{{ $author.name }}</span>
+          {{- with $author.verification -}}{{- if .verified -}}{{- partial "embed/icon.html" "verified" -}}{{- end -}}{{- end -}}
+        </span>
+        <span class="x-handle">@{{ $author.screen_name }}</span>
+      </span>
+    </a>
+    <a class="x-logo" href="{{ $url }}" target="_blank" rel="noopener" aria-label="{{ i18n "embed_view_on_x" }}">
+      {{- partial "embed/icon.html" "x" -}}
+    </a>
+  </header>
+
+  {{- with .replying_to -}}
+  <p class="x-replying">{{ i18n "embed_replying_to" }} <a href="https://x.com/{{ . }}" target="_blank" rel="noopener">@{{ . }}</a></p>
+  {{- end -}}
+
+  {{- /* lang 只认两字母代码：X 用 und / qme / zxx 这类三字母码表示「没有语言」 */ -}}
+  {{- with .text -}}
+  <div class="x-text"{{ with findRE `^[a-z]{2}$` $t.lang }} lang="{{ index . 0 }}"{{ end }}>{{ partial "embed/x-text.html" . }}</div>
+  {{- end -}}
+
+  {{- with .media -}}{{- with first 4 (.all | default slice) -}}
+  {{- $n := len . -}}
+  <div class="x-media x-media-{{ $n }}">
+    {{- range $i, $m := . -}}
+    {{- $video := ne $m.type "photo" -}}
+    {{- /* 配图按格子大小向 twimg 要尺寸：单张 1200 宽，拼图 680 宽 */ -}}
+    {{- $img := $m.thumbnail_url -}}
+    {{- if not $video -}}
+      {{- $img = printf "%s?name=%s" (replaceRE `\?.*$` "" $m.url) (cond (eq $n 1) "medium" "small") -}}
+    {{- end -}}
+    <a class="x-media-item" href="{{ $url }}/{{ cond $video "video" "photo" }}/{{ add $i 1 }}" target="_blank" rel="noopener">
+      <img src="{{ partial "embed/image.html" $img }}" alt="{{ $m.altText }}"{{ with $m.width }} width="{{ int . }}"{{ end }}{{ with $m.height }} height="{{ int . }}"{{ end }} loading="lazy" decoding="async" referrerpolicy="no-referrer">
+      {{- if $video -}}<span class="embed-play">{{ partial "embed/icon.html" "play" }}</span>{{- end -}}
+    </a>
+    {{- end -}}
+  </div>
+  {{- end -}}{{- end -}}
+
+  {{- /* 引用的帖子整块是一个链接，所以它的正文不再包链接（<a> 不能套 <a>） */ -}}
+  {{- with .quote -}}
+  <a class="x-quote" href="{{ .url }}" target="_blank" rel="noopener">
+    <span class="x-quote-head">
+      <img class="x-quote-avatar" src="{{ partial "embed/image.html" .author.avatar_url }}" alt="" width="20" height="20" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+      <span class="x-name-text">{{ .author.name }}</span>
+      <span class="x-handle">@{{ .author.screen_name }}</span>
+    </span>
+    {{- with .text -}}
+    <span class="x-quote-text">{{ replace (htmlEscape .) "\n" "<br>" | safeHTML }}</span>
+    {{- end -}}
+  </a>
+  {{- end -}}
+
+  <footer class="x-foot">
+    <a class="x-date" href="{{ $url }}" target="_blank" rel="noopener">
+      <time datetime="{{ $date.Format "2006-01-02T15:04:05Z" }}">{{ $date.Add (time.ParseDuration "8h") | time.Format ":date_medium" }}</time>
+    </a>
+    <span class="x-stats">
+      {{- range slice (slice "reply" .replies "embed_replies") (slice "repost" .retweets "embed_reposts") (slice "like" .likes "embed_likes") }}
+      <span class="x-stat" title="{{ i18n (index . 2) }}">
+        {{- partial "embed/icon.html" (index . 0) -}}
+        <span class="embed-sr">{{ i18n (index . 2) }}</span>
+        {{- partial "embed/count.html" (index . 1) -}}
+      </span>
+      {{- end }}
+    </span>
+  </footer>
+</figure>
+
+{{- else -}}
+{{- /* 降级卡片。纯 ID 没有用户名，用 /i/status/<id>，X 会自己跳到正确的地址 */ -}}
+{{- $href := "" -}}
+{{- if $id -}}{{- $href = printf "https://x.com/%s/status/%s" ($handle | default "i") $id -}}
+{{- else if hasPrefix $src "http" -}}{{- $href = $src -}}{{- end -}}
+<figure class="embed-card x-card embed-missing not-prose">
+  <header class="x-head">
+    <span class="x-names">
+      <span class="x-name">{{ i18n "embed_x_post" }}</span>
+      {{- with $handle -}}<span class="x-handle">@{{ . }}</span>{{- end -}}
+    </span>
+    <span class="x-logo">{{ partial "embed/icon.html" "x" }}</span>
+  </header>
+  <p class="embed-missing-text">{{ i18n "embed_x_unavailable" }}</p>
+  {{- with $href -}}
+  <footer class="x-foot">
+    <a class="embed-missing-link" href="{{ . }}" target="_blank" rel="noopener">{{ i18n "embed_view_on_x" }} →</a>
+  </footer>
+  {{- end -}}
+</figure>
+{{- end -}}

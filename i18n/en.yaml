@@ -3,3 +3,19 @@ machine_translated_notice: This page is a machine translation of the Chinese ori
 read_original: Read the Chinese original
 language: Language
 reading_empty: Nothing here yet.
+
+# X / Bilibili cards (layouts/partials/embed/)
+embed_x_post: Post on X
+embed_view_on_x: View on X
+embed_x_unavailable: This post couldn't be loaded. It may have been deleted or made private.
+embed_replying_to: Replying to
+embed_replies: Replies
+embed_reposts: Reposts
+embed_likes: Likes
+embed_views: Views
+embed_danmaku: Danmaku
+embed_parts:
+  one: "{{ .Count }} part"
+  other: "{{ .Count }} parts"
+embed_bili_unavailable: Couldn't load this video
+embed_view_on_bilibili: Watch on Bilibili

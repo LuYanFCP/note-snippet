@@ -362,6 +362,45 @@ article .highlight pre code > span > span:last-child {
   overflow-wrap: anywhere;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Inline code: a warm paper chip instead of Typography's literal backticks.
+
+   Tailwind Typography draws a "`" before and after every inline <code>
+   (`.prose ... :where(code)::before { content: "`" }`, specificity
+   (4,1,1)), so `.env` showed up on the page with its Markdown backticks
+   still on. The tint does the job the backticks were doing.
+
+   The theme also makes every article <code> inline-block, which keeps a
+   long token like redacted-xxxx@private.invalid from wrapping and pushes
+   it past the column. Plain inline + box-decoration-break lets it wrap and
+   gives each line fragment its own rounded ends.
+
+   `:not(pre) > code` keeps fenced blocks out of this — Chroma's
+   <pre><code> is handled above. Five :not(#\#) beat the theme's (5,0,2)
+   inline-block rule and Typography's (4,1,1) backticks. */
+/* ---------------------------------------------------------------------- */
+article:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) :not(pre) > code {
+  --code-chip: rgba(160, 133, 96, 0.13);
+
+  display: inline;
+  padding: 0.1em 0.38em;
+  border-radius: 3px;
+  background: var(--code-chip);
+  font-weight: 500;
+  overflow-wrap: break-word;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.dark article:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) :not(pre) > code {
+  --code-chip: rgba(243, 232, 207, 0.09);
+}
+
+article:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) :not(pre) > code::before,
+article:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) :not(pre) > code::after {
+  content: none;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* Inline Table of Contents — book-frontispiece feel:
@@ -825,6 +864,7 @@ article pre.mermaid[data-processed="true"] {
 /* ---- X ---------------------------------------------------------------- */
 .x-card:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
   max-width: 36rem;
+  margin-inline: auto;
   padding: 1rem 1.15rem 0.8rem;
 }
 
@@ -1233,6 +1273,7 @@ a.bili-card:hover .bili-title:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
 .embed-missing.bili-card:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
   display: block;
   max-width: 36rem;
+  margin-inline: auto;
   padding: 1rem 1.15rem;
 }
 

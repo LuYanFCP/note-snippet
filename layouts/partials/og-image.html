@@ -1,0 +1,61 @@
+{{- /*
+  给分享卡片（X / Telegram / Slack 等读 og:image 的地方）生成一张 1200×630
+  的图：亚麻底色上写标题，底部一行站点名和域名。每页一张，构建时用 Hugo
+  自己的 images.Text 画，不依赖外部服务；结果缓存在 resources/_gen。
+
+  字体 assets/fonts/og.otf 不进仓库（CJK 字体有 8MB），由 build.sh 下载。
+  找不到字体就返回空，调用方退回到不带图的 summary 卡片。
+
+  images.Text 只会在空格处折行，中文标题会一路冲出画布，所以这里先按估算
+  宽度手动折好行再交给它：ASCII 字符按 0.55em、其余按 1em 算。
+  另外做一点最基本的避头尾：「【（《“」这类开括号不留在行尾，带到下一行。
+*/ -}}
+{{- $font := resources.Get "fonts/og.otf" -}}
+{{- $base := resources.Get "og/base.png" -}}
+{{- $img := "" -}}
+{{- if and $font $base -}}
+  {{- $title := .Title -}}
+  {{- if .IsHome -}}{{- $title = site.Title -}}{{- end -}}
+
+  {{- $size := 64 -}}
+  {{- $maxEm := 16.0 -}}{{- /* 1040px 可用宽度 ÷ 64px */ -}}
+  {{- $maxLines := 3 -}}
+
+  {{- $lines := slice -}}
+  {{- $cur := "" -}}
+  {{- $w := 0.0 -}}
+  {{- range findRE `[\x21-\x7E]+|\s+|[^\x00-\x7F]` $title -}}
+    {{- $tw := 1.0 -}}
+    {{- if findRE `^\s+$` . -}}{{- $tw = 0.3 -}}
+    {{- else if findRE `^[\x21-\x7E]+$` . -}}{{- $tw = mul 0.55 (len .) -}}
+    {{- end -}}
+    {{- if and (gt (add $w $tw) $maxEm) (ne $cur "") -}}
+      {{- $carry := "" -}}
+      {{- with findRE `[【（《“‘「『(\[]$` $cur -}}{{- $carry = index . 0 -}}{{- end -}}
+      {{- $lines = $lines | append (strings.TrimRight " " (strings.TrimSuffix $carry $cur)) -}}
+      {{- $cur = $carry -}}{{- $w = cond (eq $carry "") 0.0 1.0 -}}
+    {{- end -}}
+    {{- if not (and (eq $cur "") (findRE `^\s+$` .)) -}}
+      {{- $cur = print $cur . -}}{{- $w = add $w $tw -}}
+    {{- end -}}
+  {{- end -}}
+  {{- with $cur -}}{{- $lines = $lines | append . -}}{{- end -}}
+  {{- if gt (len $lines) $maxLines -}}
+    {{- $lines = first $maxLines $lines -}}
+    {{- $last := index $lines (sub $maxLines 1) -}}
+    {{- $lines = (first (sub $maxLines 1) $lines) | append (print $last "…") -}}
+  {{- end -}}
+
+  {{- $footer := site.Params.name | default site.Title -}}
+  {{- $host := (urls.Parse site.BaseURL).Host -}}
+  {{- $img = $base | images.Filter
+      (images.Text (delimit $lines "\n") (dict
+        "font" $font "size" $size "color" "#1f1d1a"
+        "x" 80 "y" 120 "linespacing" 24))
+      (images.Text $footer (dict
+        "font" $font "size" 28 "color" "#5f7042" "x" 80 "y" 548))
+      (images.Text $host (dict
+        "font" $font "size" 24 "color" "#9a8f7a" "x" 1120 "y" 552 "alignx" "right"))
+  -}}
+{{- end -}}
+{{- return $img -}}

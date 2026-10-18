@@ -74,8 +74,7 @@
   {{- if or hugo.IsProduction (eq site.Params.env "production") -}}
   {{- template "_internal/google_analytics.html" . -}}
   {{- template "_internal/schema.html" . -}}
-  {{- template "_internal/opengraph.html" . -}}
-  {{- template "_internal/twitter_cards.html" . -}}
+  {{- partial "social-meta.html" . -}}
   {{- range .AlternativeOutputFormats -}}
   <link
     rel="{{- .Rel -}}"

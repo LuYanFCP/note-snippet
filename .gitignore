@@ -13,3 +13,7 @@ mermaid-*.png
 # 本地跑翻译脚本用的密钥，不进仓库
 .env.local
 __pycache__/
+
+# 分享卡片字体（build.sh 下载）和 Hugo 的图片处理缓存
+assets/fonts/
+resources/_gen/

@@ -19,6 +19,9 @@
 {{- /* 主题 CSS 必须是 giscus iframe 能跨域拿到的绝对地址，CORS 头在 static/_headers */ -}}
 {{- $light := "giscus/paper-light.css" | absURL -}}
 {{- $dark := "giscus/paper-dark.css" | absURL -}}
+{{- /* 本地 hugo server 下 Chrome 的 Private Network Access 不许公网的 giscus.app
+       去读 localhost 上的 CSS，自定义主题加载失败会变成黑框，退回内置主题 */ -}}
+{{- if hugo.IsServer -}}{{- $light = "light" -}}{{- $dark = "dark" -}}{{- end -}}
 <section class="giscus-wrap">
   <div class="giscus"></div>
 </section>

@@ -63,6 +63,15 @@ defaultContentLanguageInSubdir = false
   # Custom footer supports Markdown and {Year}.
   footer = "&copy; [0xNullPath](https://blog.0xnullpath.work) 2023-{Year} | [GitHub](https://github.com/LuYanFCP) | [Twitter](https://x.com/luyanfcp)"
   
+  # 评论：giscus，讨论串存在本仓库的 Discussions 里。
+  # repoId / categoryId 从 https://giscus.app 填完仓库后生成的配置里抄，
+  # categoryId 为空时评论区不渲染（layouts/partials/comments.html）。
+  [params.giscus]
+    repo = "LuYanFCP/note-snippet"
+    repoId = "R_kgDONWVDGA"
+    category = "Announcements"
+    categoryId = ""
+
   [params.githubSync]
     enabled = true
     username = "luyanfcp"

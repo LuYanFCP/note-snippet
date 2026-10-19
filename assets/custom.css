@@ -1301,3 +1301,9 @@ a.bili-card:hover .bili-title:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
 .bili-card .embed-missing-link:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
   margin-top: 0.5rem;
 }
+
+/* giscus 评论区（layouts/partials/comments.html）。和文章之间留出跟
+   Post Nav 一样的 mt-24；iframe 自己是透明的，底色由 static/giscus/ 的主题定。 */
+.giscus-wrap:not(#\#):not(#\#):not(#\#):not(#\#):not(#\#) {
+  margin-top: 6rem;
+}

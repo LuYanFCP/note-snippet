@@ -1,0 +1,5 @@
+# Cloudflare Pages 响应头。
+# giscus 的自定义主题 CSS 是在 giscus.app 的 iframe 里加载的，跨域，
+# 不放开 CORS 浏览器就拒绝，评论区会退回无样式。
+/giscus/*
+  Access-Control-Allow-Origin: *

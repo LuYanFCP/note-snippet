@@ -1,0 +1,35 @@
+/* giscus 亮色主题：在官方 light 上把白底、GitHub 蓝、绿按钮换成站点的
+   亚麻纸色和苔橄榄（同 assets/custom.css 里的 alert 配色），
+   让评论区看起来是文章的一部分，而不是嵌进来的 GitHub。 */
+@import url("https://giscus.app/themes/light.css");
+
+main {
+  --color-canvas-default: #faf8f1;
+  --color-canvas-overlay: #faf8f1;
+  --color-canvas-subtle: #f3efe2;
+  --color-canvas-inset: #f3efe2;
+  --color-border-default: #e2dccb;
+  --color-border-muted: #ebe6d8;
+  --color-fg-default: #1f1d1a;
+  --color-fg-muted: #6b6457;
+  --color-fg-subtle: #8a8274;
+
+  --color-accent-fg: #5f7042;
+  --color-accent-emphasis: #5f7042;
+  --color-accent-muted: rgba(95, 112, 66, 0.35);
+  --color-accent-subtle: #eef0e3;
+
+  --color-btn-bg: #f3efe2;
+  --color-btn-hover-bg: #ece7d7;
+  --color-btn-active-bg: #e5dfcc;
+  --color-btn-border: rgba(160, 133, 96, 0.3);
+  --color-btn-hover-border: rgba(160, 133, 96, 0.4);
+  --color-btn-primary-bg: #5f7042;
+  --color-btn-primary-hover-bg: #546339;
+  --color-btn-primary-selected-bg: #4a5733;
+  --color-btn-primary-disabled-bg: #a9b394;
+
+  --color-segmented-control-bg: #ece7d7;
+  --color-segmented-control-button-bg: #faf8f1;
+  --color-scale-blue-1: #dfe4cf;
+}

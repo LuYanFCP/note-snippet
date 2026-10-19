@@ -1,0 +1,66 @@
+{{- /*
+  giscus 评论，讨论串存在 GitHub Discussions 里（配置见 hugo.toml 的
+  [params.giscus]）。categoryId 没填就整块不渲染 —— 仓库还没开 Discussions /
+  没装 giscus App 时，宁可没有评论区，也别挂一个报错的 iframe。
+
+  只在文章页出现（mainSections），about、reading 这类独立页不带评论；
+  单篇想关掉就在 front matter 写 comments: false。
+
+  映射用 specific + translationKey（如 issue-21），而不是 pathname：
+  中文和英文译文的 URL 不同，按路径映射会拆成两个讨论串，这样两边共用一个。
+  strict 让 giscus 按 term 的哈希精确匹配，标题相近的讨论串不会串到一起。
+*/ -}}
+{{- $g := site.Params.giscus -}}
+{{- if and $g.repo $g.repoId $g.categoryId
+      (in site.Params.mainSections .Type)
+      (ne .Params.comments false) -}}
+{{- $term := .Params.translationKey | default .File.ContentBaseName -}}
+{{- $lang := cond (eq site.Language.Lang "zh-cn") "zh-CN" "en" -}}
+{{- /* 主题 CSS 必须是 giscus iframe 能跨域拿到的绝对地址，CORS 头在 static/_headers */ -}}
+{{- $light := "giscus/paper-light.css" | absURL -}}
+{{- $dark := "giscus/paper-dark.css" | absURL -}}
+{{- /* 本地 hugo server 下 Chrome 的 Private Network Access 不许公网的 giscus.app
+       去读 localhost 上的 CSS，自定义主题加载失败会变成黑框，退回内置主题 */ -}}
+{{- if hugo.IsServer -}}{{- $light = "light" -}}{{- $dark = "dark" -}}{{- end -}}
+<section class="giscus-wrap">
+  <div class="giscus"></div>
+</section>
+<script>
+  (() => {
+    const themes = { light: '{{- $light -}}', dark: '{{- $dark -}}' };
+    const pick = () =>
+      document.documentElement.classList.contains('dark') ? themes.dark : themes.light;
+
+    const s = document.createElement('script');
+    s.src = 'https://giscus.app/client.js';
+    s.async = true;
+    s.crossOrigin = 'anonymous';
+    Object.entries({
+      repo: '{{- $g.repo -}}',
+      repoId: '{{- $g.repoId -}}',
+      category: '{{- $g.category -}}',
+      categoryId: '{{- $g.categoryId -}}',
+      mapping: 'specific',
+      term: '{{- $term -}}',
+      strict: '1',
+      reactionsEnabled: '1',
+      emitMetadata: '0',
+      inputPosition: 'top',
+      lang: '{{- $lang -}}',
+      loading: 'lazy',
+      theme: pick(),
+    }).forEach(([k, v]) => (s.dataset[k] = v));
+    document.querySelector('.giscus').after(s);
+
+    // 页面的暗色开关只是切 <html> 上的 dark class（header.html），
+    // 盯住它，变了就通知 iframe 换主题。
+    new MutationObserver(() => {
+      const frame = document.querySelector('iframe.giscus-frame');
+      frame?.contentWindow.postMessage(
+        { giscus: { setConfig: { theme: pick() } } },
+        'https://giscus.app'
+      );
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  })();
+</script>
+{{- end -}}

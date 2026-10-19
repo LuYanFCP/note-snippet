@@ -70,7 +70,7 @@ defaultContentLanguageInSubdir = false
     repo = "LuYanFCP/note-snippet"
     repoId = "R_kgDONWVDGA"
     category = "Announcements"
-    categoryId = ""
+    categoryId = "DIC_kwDONWVDGM4DI9Be"
 
   [params.githubSync]
     enabled = true

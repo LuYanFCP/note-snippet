@@ -1,5 +1,88 @@
 # Cloudflare Pages 响应头。
-# giscus 的自定义主题 CSS 是在 giscus.app 的 iframe 里加载的，跨域，
-# 不放开 CORS 浏览器就拒绝，评论区会退回无样式。
+#
+# 站点在 GitHub issue 同步后整站重建。Pages 的部署缓存会跟着新版本换掉，
+# 但自定义域名前面那层区域缓存不会在部署时清空，长 TTL 的 HTML 会把旧页面
+# 留在边缘。所以文档（HTML、feed、sitemap）浏览器仍是 max-age=0：每次都向
+# 边缘核对。边缘用 s-maxage 和 Cloudflare-CDN-Cache-Control 存 5 分钟
+# （浏览器忽略 s-maxage）。这是一次 issue 同步之后还能看到旧 HTML 的上限。
+#
+# 更具体的静态资源规则必须拆掉上面这两份头再重设。_headers 里同名头是拼接，
+# 不是覆盖；Cloudflare-CDN-Cache-Control 又优先于 Cache-Control，留下 300
+# 秒的话，带哈希的 CSS 在边缘也只会活 5 分钟。
+
+/*
+  Cache-Control: public, max-age=0, s-maxage=300, must-revalidate
+  Cloudflare-CDN-Cache-Control: public, max-age=300
+
+# 文件名不带内容哈希。替换同一路径时，一周是旧副本的上限。
+# 现在区域会把 Pages 默认的 max-age=0 抬到 4 小时；这里写成明确的更长 TTL。
+/images/*
+  ! Cache-Control
+  ! Cloudflare-CDN-Cache-Control
+  Cache-Control: public, max-age=604800
+
+/*.png
+  ! Cache-Control
+  ! Cloudflare-CDN-Cache-Control
+  Cache-Control: public, max-age=604800
+
+/*.jpg
+  ! Cache-Control
+  ! Cloudflare-CDN-Cache-Control
+  Cache-Control: public, max-age=604800
+
+/*.jpeg
+  ! Cache-Control
+  ! Cloudflare-CDN-Cache-Control
+  Cache-Control: public, max-age=604800
+
+/*.gif
+  ! Cache-Control
+  ! Cloudflare-CDN-Cache-Control
+  Cache-Control: public, max-age=604800
+
+/*.webp
+  ! Cache-Control
+  ! Cloudflare-CDN-Cache-Control
+  Cache-Control: public, max-age=604800
+
+/*.svg
+  ! Cache-Control
+  ! Cloudflare-CDN-Cache-Control
+  Cache-Control: public, max-age=604800
+
+/*.ico
+  ! Cache-Control
+  ! Cloudflare-CDN-Cache-Control
+  Cache-Control: public, max-age=604800
+
+/*.js
+  ! Cache-Control
+  ! Cloudflare-CDN-Cache-Control
+  Cache-Control: public, max-age=604800
+
+/*.css
+  ! Cache-Control
+  ! Cloudflare-CDN-Cache-Control
+  Cache-Control: public, max-age=604800
+
+# Hugo fingerprint 的样式（layouts/partials/head.html）。URL 含内容哈希，
+# 文件一变地址就变，可以当永久资源。必须写在 /*.css 之后。
+/main.min.*
+  ! Cache-Control
+  ! Cloudflare-CDN-Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+
+# 分享卡同样带 Hugo 的内容哈希（og/*_hu_*）。必须写在 /*.png 之后。
+/og/*
+  ! Cache-Control
+  ! Cloudflare-CDN-Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+
+# giscus 的主题 CSS 在 giscus.app 的 iframe 里跨域加载，不放开 CORS
+# 评论区会退回无样式。主题文件会改，不做 immutable。
 /giscus/*
+  ! Cache-Control
+  ! Cloudflare-CDN-Cache-Control
+  Cache-Control: public, max-age=86400
   Access-Control-Allow-Origin: *

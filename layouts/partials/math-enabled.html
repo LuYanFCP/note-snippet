@@ -1,0 +1,16 @@
+{{- /*
+  只在真有公式的页面输出 "1"。
+  全局 params.math 曾经把 KaTeX 加进每一页（首页、关于、订阅都没有公式）。
+  单页 front matter 的 math 显式指定时以它为准；否则按正文判断。
+  分隔符和 hugo.toml 的 goldmark passthrough、translate_issue.py 的掩码一致。
+  围栏代码和行内代码先剥掉，避免示例里的 $ 被当成公式。
+*/ -}}
+{{- if isset .Params "math" -}}
+{{- if .Params.math }}1{{ end -}}
+{{- else -}}
+{{- $src := .RawContent | default "" -}}
+{{- $src = replaceRE "(?s)```.*?```" "" $src -}}
+{{- $src = replaceRE "(?s)~~~.*?~~~" "" $src -}}
+{{- $src = replaceRE "[`][^`\\n]+[`]" "" $src -}}
+{{- if findRE `(?s)\$\$|\\\[|\\\(|\$[^$\n]+\$` $src -}}1{{- end -}}
+{{- end -}}

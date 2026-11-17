@@ -56,7 +56,7 @@
   ></script>
   {{- end -}}
 
-  {{- if or .Params.math site.Params.math -}}
+  {{- if eq (partial "math-enabled.html" . | strings.TrimSpace) "1" -}}
   {{- partial "math.html" . -}}
   {{- end -}}
 

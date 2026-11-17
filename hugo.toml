@@ -78,7 +78,8 @@ defaultContentLanguageInSubdir = false
 [params]
   author = 'LuYanFCP'
   color = 'linen'
-  math = true
+  # KaTeX 由 layouts/partials/math-enabled.html 按页面判断，不要在这里全局打开。
+  math = false
   disableHLJS = true
   mainSections = ['posts']
   description = '“Wir müssen wissen, wir werden wissen.”— David Hilbert'

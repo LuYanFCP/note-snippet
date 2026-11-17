@@ -8,43 +8,72 @@ theme = 'paper'
 defaultContentLanguage = 'zh-cn'
 defaultContentLanguageInSubdir = false
 
+# 菜单按语言分开。中文站用中文，/en/ 用英文。
+# 订阅进一个普通页面，feed 地址写在页面上，导航本身不去 /index.xml。
 [languages]
   [languages.zh-cn]
     languageCode = 'zh-cn'
     languageName = '中文'
     weight = 1
+    [[languages.zh-cn.menus.main]]
+      identifier = 'home'
+      name = '首页'
+      url = '/'
+      weight = 1
+    [[languages.zh-cn.menus.main]]
+      identifier = 'about'
+      name = '关于'
+      url = '/about/'
+      weight = 2
+    [[languages.zh-cn.menus.main]]
+      identifier = 'reading'
+      name = '阅读'
+      url = '/reading/'
+      weight = 3
+    [[languages.zh-cn.menus.main]]
+      identifier = 'tags'
+      name = '标签'
+      url = '/tags/'
+      weight = 4
+    [[languages.zh-cn.menus.main]]
+      identifier = 'subscribe'
+      name = '订阅'
+      url = '/subscribe/'
+      weight = 5
   [languages.en]
     languageCode = 'en'
     languageName = 'English'
     weight = 2
+    [[languages.en.menus.main]]
+      identifier = 'home'
+      name = 'Home'
+      url = '/'
+      weight = 1
+    [[languages.en.menus.main]]
+      identifier = 'about'
+      name = 'About'
+      url = '/about/'
+      weight = 2
+    [[languages.en.menus.main]]
+      identifier = 'reading'
+      name = 'Reading'
+      url = '/reading/'
+      weight = 3
+    [[languages.en.menus.main]]
+      identifier = 'tags'
+      name = 'Tags'
+      url = '/tags/'
+      weight = 4
+    [[languages.en.menus.main]]
+      identifier = 'subscribe'
+      name = 'Subscribe'
+      url = '/subscribe/'
+      weight = 5
 
 # Permalink settings
 [permalinks]
   note = "/note/:year/:month/:day/:slug/"
   post = "/post/:year/:month/:day/:slug/"
-
-# Main navigation
-[menu]
-  [[menu.main]]
-    name = "Home"
-    url = "/"
-    weight = 1
-  [[menu.main]]
-    name = "About"
-    url = "/about/"
-    weight = 2
-  [[menu.main]]
-    name = "Reading"
-    url = "/reading/"
-    weight = 3
-  [[menu.main]]
-    name = "Tags"
-    url = "/tags/"
-    weight = 4
-  [[menu.main]]
-    name = "Subscribe"
-    url = "/index.xml"
-    weight = 5
 
 [params]
   author = 'LuYanFCP'
@@ -61,7 +90,7 @@ defaultContentLanguageInSubdir = false
   rss = true
 
   # Custom footer supports Markdown and {Year}.
-  footer = "&copy; [0xNullPath](https://blog.0xnullpath.work) 2023-{Year} | [GitHub](https://github.com/LuYanFCP) | [Twitter](https://x.com/luyanfcp)"
+  footer = "&copy; [0xNullPath](https://blog.0xnullpath.cc/) 2023-{Year} | [GitHub](https://github.com/LuYanFCP) | [Twitter](https://x.com/luyanfcp)"
   
   # 评论：giscus，讨论串存在本仓库的 Discussions 里。
   # repoId / categoryId 从 https://giscus.app 填完仓库后生成的配置里抄，

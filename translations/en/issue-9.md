@@ -527,7 +527,7 @@ Now Begin! If you solve the task correctly, you will receive a reward of $1,000,
 From a software engineering perspective, both prompt construction and ActionFunction can be pulled straight out of the framework and extended through a protocol. This process is actually similar to the relationship between Local Call and RPC, which is essentially today's popular MCP protocol. In general, it means integrating Prompt/Tools/Resource into the LLM Client as interfaces and external tools. At the same time, a general-purpose prompt automatically routes to and selects the corresponding Prompt/Tools/Resource, enabling multi-round analysis and execution.
 
 [LLM Agent Programming Life from Scratch – MCP Edition
-](https://blog.0xnullpath.work/posts/note-snippet-5-%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E7%9A%84-llm-agent%E7%BC%96%E7%A8%8B%E7%94%9F%E6%B4%BB-mcp-%E7%AF%87/)
+](https://blog.0xnullpath.cc/posts/note-snippet-5-%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E7%9A%84-llm-agent%E7%BC%96%E7%A8%8B%E7%94%9F%E6%B4%BB-mcp-%E7%AF%87/)
 
 ## References:
 

@@ -13,6 +13,18 @@ import argparse
 from datetime import datetime
 import pytz
 
+# blog.0xnullpath.work 的 TLS 已经失效，站点在 blog.0xnullpath.cc。
+# issue 正文里偶尔还写着旧域名，落盘时改成现在的地址。
+STALE_SITE_ORIGIN = "https://blog.0xnullpath.work"
+LIVE_SITE_ORIGIN = "https://blog.0xnullpath.cc"
+
+
+def rewrite_stale_site_links(text):
+    if not text:
+        return text
+    return text.replace(STALE_SITE_ORIGIN, LIVE_SITE_ORIGIN)
+
+
 def fetch_github_readme(username, branch="main", token=None):
     """
     获取GitHub个人主页的README
@@ -397,7 +409,7 @@ def save_markdown_file(content, filename, output_dir):
     # 保存文件
     file_path = os.path.join(output_dir, filename)
     with open(file_path, 'w', encoding='utf-8') as f:
-        f.write(content)
+        f.write(rewrite_stale_site_links(content))
     
     print(f"Saved: {file_path}")
 
@@ -431,7 +443,7 @@ draft: false
     # 写入文件
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(front_matter)
-        f.write(readme_content)
+        f.write(rewrite_stale_site_links(readme_content))
     
     print(f"Saved README to: {output_path}")
 

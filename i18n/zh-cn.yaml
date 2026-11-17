@@ -4,6 +4,9 @@ read_original: 阅读中文原文
 language: 语言
 reading_empty: 暂时还没有推荐。
 
+# 文章页阅读量（layouts/partials/busuanzi.html）。COUNT 换成不蒜子的数字节点。
+page_views: 阅读 COUNT 次
+
 # X / B 站卡片（layouts/partials/embed/）
 embed_x_post: X 上的帖子
 embed_view_on_x: 在 X 上查看

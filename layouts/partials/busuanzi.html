@@ -1,0 +1,13 @@
+{{- /*
+  不蒜子页面阅读量，只在文章页（mainSections）输出。
+  首页、关于、阅读、标签、订阅不引入脚本，也不渲染计数。
+
+  用的是官方纯净脚本和标准 page_pv 节点（不放 site_pv / site_uv，
+  避免页脚再多一行全站计数）。容器先写 display:none：脚本拿到数字后
+  会把 style.display 改成 inline；请求失败时它自己也会改回 none。
+  脚本被拦截、很慢或根本没回来时，样式保持隐藏，不会露出空的「阅读 次」。
+*/ -}}
+{{- if in site.Params.mainSections .Type -}}
+<span id="busuanzi_container_page_pv" class="page-views" style="display:none"><span class="mx-1" aria-hidden="true">&middot;</span>{{- replace (i18n "page_views") "COUNT" `<span id="busuanzi_value_page_pv"></span>` | safeHTML -}}</span>
+<script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+{{- end -}}

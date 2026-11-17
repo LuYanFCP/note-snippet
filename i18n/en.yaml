@@ -4,6 +4,9 @@ read_original: Read the Chinese original
 language: Language
 reading_empty: Nothing here yet.
 
+# Page view count (layouts/partials/busuanzi.html). COUNT is the busuanzi value node.
+page_views: COUNT views
+
 # X / Bilibili cards (layouts/partials/embed/)
 embed_x_post: Post on X
 embed_view_on_x: View on X

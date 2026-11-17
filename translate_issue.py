@@ -654,6 +654,9 @@ def store_translation(out_dir: str, name: str, meta: dict, body: str) -> tuple[s
     """
     os.makedirs(out_dir, exist_ok=True)
     path = os.path.join(out_dir, f"{name}.md")
+    # 旧域名 blog.0xnullpath.work 证书失效。译文照抄原文链接时改到 .cc，
+    # 免得下一次翻译把死链写回仓库。
+    body = body.replace("https://blog.0xnullpath.work", "https://blog.0xnullpath.cc")
     front = "\n".join(f"{k}: {json.dumps(v, ensure_ascii=False)}" for k, v in meta.items())
     content = f"---\n{front}\n---\n\n{body}\n"
 

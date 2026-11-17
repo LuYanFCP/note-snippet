@@ -22,6 +22,8 @@
       <span class="mx-1">&middot;</span>
       <span>{{- $single_author -}}</span>
       {{- end -}}
+      {{- /* 阅读量跟在日期和作者后面，非文章页 partial 自己会空返回 */ -}}
+      {{- partial "busuanzi.html" . -}}
     </div>
     {{- end -}}
   </header>

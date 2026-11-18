@@ -1,0 +1,39 @@
+{{- /*
+  GoatCounter 文章阅读量，只在文章页（mainSections）输出。
+  首页、关于、阅读、标签、订阅不引入 count.js，也不渲染计数。
+
+  不用官方 200×80 徽章。count.js 负责记这一次访问；页面上的数字
+  来自 /counter/<path>.json，填进和日期同一行的「阅读 n 次」。
+  path 用 location.pathname（不含查询串），和 count.js 在正式站
+  用 canonical 记下的路径一致。容器先 hidden：403、CORS、404
+  或没有数字时保持隐藏，不露出空的「阅读 次」。
+*/ -}}
+{{- if in site.Params.mainSections .Type -}}
+<span id="goatcounter-page-views" class="page-views" hidden><span class="mx-1" aria-hidden="true">&middot;</span>{{- replace (i18n "page_views") "COUNT" `<span id="goatcounter-page-views-count"></span>` | safeHTML -}}</span>
+<script data-goatcounter="https://luyanfcp.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<script>
+  (() => {
+    const root = document.getElementById('goatcounter-page-views');
+    const num = document.getElementById('goatcounter-page-views-count');
+    if (!root || !num || !window.fetch) return;
+    const path = location.pathname || '/';
+    const url =
+      'https://luyanfcp.goatcounter.com/counter/' +
+      encodeURIComponent(path) +
+      '.json';
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error('goatcounter');
+        return res.json();
+      })
+      .then((data) => {
+        const count = data && data.count;
+        if (typeof count !== 'string' && typeof count !== 'number') return;
+        if (String(count).trim() === '') return;
+        num.textContent = String(count);
+        root.hidden = false;
+      })
+      .catch(() => {});
+  })();
+</script>
+{{- end -}}
